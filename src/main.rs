@@ -1,18 +1,40 @@
 use std::{path::Path, env, vec, time::Instant};
 use image::Rgb;
 mod math;
-use math::vectors::{Float2, Float3, Vector};
 mod shaders;
+use nalgebra::{Vector3, Vector2};
 use shaders::{Shader, TestShader, SkyShader};
 mod shape;
 use shape::{Sphere, Hittable};
 mod camera;
 use camera::Camera;
 use minifb::{Key, Window, WindowOptions};
+mod scene;
+mod render;
+use rayon::prelude::*;
 
 #[allow(dead_code)]
 fn load_image(path: &str) -> image::DynamicImage {
     image::open(&Path::new(path)).expect("Failed to load image")
+}
+
+#[allow(dead_code)]
+fn save_image_to_file(texture_buffer: Vec<u32>, image_width: u32, image_height: u32, path: &str){
+    // Create image from texture buffer
+    let image_buffer: image::ImageBuffer<Rgb<u8>, Vec<_>> = image::ImageBuffer::from_fn(image_width, image_height, |x, y| {
+        let pixel = texture_buffer[(y * image_width + x) as usize];
+        let r = ((pixel & 0xFF0000) >> 16) as u8;
+        let g = ((pixel & 0x00FF00) >> 8) as u8;
+        let b = (pixel & 0x0000FF) as u8;
+        Rgb([r, g, b])
+    });
+
+    // Save generated image to file
+    image_buffer.save(path).unwrap();
+    // Open an image file using the system's default application
+    if let Err(e) = open::that(path) {
+        eprintln!("Failed to open image: {}", e);
+    }
 }
 
 #[allow(dead_code)]
@@ -29,12 +51,13 @@ fn u32_from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     (r << 16) | (g << 8) | b
 }
 
-fn timeSinceStartup(startTime: Instant) -> f32 {
-    Instant::now().duration_since(startTime).as_secs_f32()
+#[allow(dead_code)]
+fn time_since_startup(start_time: Instant) -> f32 {
+    Instant::now().duration_since(start_time).as_secs_f32()
 }
 
 fn main() {
-    let startTime = Instant::now();
+    let start_time = Instant::now();
     
     let imgx = 800;
     let imgy = 800;
@@ -42,89 +65,17 @@ fn main() {
     // Create a new ImgBuf with width: imgx and height: imgy
     //let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
     let mut texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
-
+    
     let mut camera = Camera::new(
-    Float3::zero(),
-    Float3::new(0.0, 0.0, 1.0),
-    Float3::new(0.0, 1.0, 0.0),
+    Vector3::<f32>::zeros(),
+    Vector3::<f32>::new(0.0, 0.0, 0.0),
+    Vector3::<f32>::new(0.0, 1.0, 0.0),
     70.0,
     imgx as u16,
     imgy as u16);
     camera.init();
-    
-    let shape1 = Sphere::new(Float3::new(0.0, 0.0, 4.0), 1.0);
-    let shape2 = Sphere::new(Float3::new(1.0, 1.5, 5.0), 1.0);
 
-    let time_now = Instant::now();
-    
-    // Iterate over the coordinates and pixels of the image
-    for (i, pixel) in texbuf.iter_mut().enumerate() {
-        let x = i % imgx;
-        let y = imgy - i / imgy;
-        let screen_pos = Float2::new(x as f32 / imgx as f32, y as f32 / imgy as f32);
-        // Get camera ray
-        let ray = camera.ray_from_screen_point(Float2::new(x as f32, y as f32));
-        // Calculate intersection
-        let hit1 = shape1.intersect(&ray);
-        let hit2 = shape2.intersect(&ray);
-        let mut hit: Option<f32> = hit1;
-        let mut shape: &Sphere = &shape1;
-
-        if hit1.is_some() && hit2.is_some() {
-            if hit1.unwrap() > hit2.unwrap() { 
-                hit = hit2;
-                shape = &shape2;
-            } 
-            else { 
-                hit = hit1;
-                shape = &shape1;
-            };
-        } else if hit1.is_some() {
-            hit = hit1;
-            shape = &shape1;
-        } else if hit2.is_some() {
-            hit = hit2;
-            shape = &shape2;
-        }
-        let point = ray.origin + ray.direction * hit.unwrap_or(0.0);
-        let normal = (point - shape.anchor.position).normalized();
-        // Calculate fragment
-        let color;
-        if hit.is_some() {
-            color = TestShader::frag(&screen_pos, &normal)
-        } else {
-            color = SkyShader::frag(&screen_pos, &normal)
-        }
-        
-        // Convert Float3 to Rgb
-        let final_color = color * 255.0;
-        *pixel = u32_from_u8_rgb(final_color.x as u8, final_color.y as u8, final_color.z as u8);
-    }
-
-    let time_elapsed = time_now.elapsed();
-    println!("Elapsed: {:.2?}", time_elapsed);
-
-
-
-    ///////////////////
-    // Draw a window //
-    ///////////////////
-
-    // Create image from texture buffer
-    let imgbuf: image::ImageBuffer<Rgb<u8>, Vec<_>> = image::ImageBuffer::from_fn(imgx as u32, imgy as u32, |x, y| {
-        let pixel = texbuf[(y * imgx as u32 + x) as usize];
-        let r = ((pixel & 0xFF0000) >> 16) as u8;
-        let g = ((pixel & 0x00FF00) >> 8) as u8;
-        let b = (pixel & 0x0000FF) as u8;
-        Rgb([r, g, b])
-    });
-
-    // Save generated image to file
-    imgbuf.save("result.png").unwrap();
-    // Open an image file using the system's default application
-    //if let Err(e) = open::that("result.png") {
-    //    eprintln!("Failed to open image: {}", e);
-    //}
+    let shape = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
 
     // Create a window with the specified dimensions
     let mut window = Window::new(
@@ -137,14 +88,71 @@ fn main() {
         panic!("{}", e);
     });
 
+    let mut time_elapsed = start_time.elapsed();
+    let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
+    let mut mouse_delta;
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
+        let time_now = Instant::now();
 
-        
+        // Handle input
+        // Mouse
+        let current_mouse_pos = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or(mouse_position);
+        mouse_delta = Vector2::new(current_mouse_pos.0 - mouse_position.0, current_mouse_pos.1 - mouse_position.1);
+        mouse_position = current_mouse_pos;
+        // Keyboard
+        // Move speed
+        let move_speed = if window.is_key_down(Key::LeftShift) {10.0} else {3.0};
+        // Move vector
+        let right = window.is_key_down(Key::D);
+        let left = window.is_key_down(Key::A);
+        let forward = window.is_key_down(Key::W);
+        let back = window.is_key_down(Key::S);
+        let up = window.is_key_down(Key::E);
+        let down = window.is_key_down(Key::Q);
+        let move_vector = Vector3::new(
+            (right as i32 - left as i32) as f32,
+            (forward as i32 - back as i32) as f32,
+            (up as i32 - down as i32) as f32);
+        let move_vector_scaled = move_vector * time_elapsed.as_secs_f32();
 
+        camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
+
+        if window.get_mouse_down(minifb::MouseButton::Right) {
+            camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + camera.rotation);
+        }
+        camera.init();
+
+        // Iterate over the pixels of the image
+        texbuf.par_iter_mut().enumerate().for_each(|(i, pixel)| {
+            let x = i % imgx;
+            let y = imgy - i / imgy;
+            let screen_pos = Vector2::<f32>::new(x as f32 / imgx as f32, y as f32 / imgy as f32);
+            // Get camera ray
+            let ray = camera.ray_from_screen_point(Vector2::<f32>::new(x as f32, y as f32));
+            // Calculate intersection
+            let hit = shape.intersect(&ray);
+
+            // Calculate fragment
+            let color;
+            if hit.is_some() {
+                let point = ray.origin + ray.direction * hit.unwrap_or(1.0);
+                let normal = (point - shape.anchor.position).normalize();
+                color = TestShader::frag(&screen_pos, &normal)
+            } else {
+                color = SkyShader::frag(&screen_pos, &ray.direction)
+            }
+            
+            // Convert Float3 to Rgb
+            let final_color = color * 255.0;
+            *pixel = u32_from_u8_rgb(final_color.x as u8, final_color.y as u8, final_color.z as u8);
+        });
+        time_elapsed = time_now.elapsed();
+        println!("Elapsed: {:.2?}", time_elapsed);
         // Draw the image in the center of the window
         window
             .update_with_buffer(&texbuf, imgx as usize, imgy as usize)
             .unwrap();
+        
     }
 }

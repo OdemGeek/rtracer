@@ -1,14 +1,14 @@
 use crate::math::ray::Ray;
-use crate::math::vectors::{Float3, Vector};
+use nalgebra::Vector3;
 
 pub struct Hit {
     pub t: f32,
-    pub normal: Float3,
+    pub normal: Vector3<f32>,
 }
 
 #[allow(dead_code)]
 impl Hit {
-    pub fn new(t: f32, normal: Float3) -> Self {
+    pub fn new(t: f32, normal: Vector3<f32>) -> Self {
         Hit { t, normal }
     }
 }
@@ -19,11 +19,11 @@ pub trait Hittable{
 }
 
 pub struct Anchor {
-    pub position: Float3
+    pub position: Vector3<f32>
 }
 
 impl Anchor {
-    pub fn new(position: Float3) -> Self {
+    pub fn new(position: Vector3<f32>) -> Self {
         Anchor { position }
     }
 }
@@ -34,7 +34,7 @@ pub struct Sphere {
 }
 
 impl Sphere {
-    pub fn new(position: Float3, radius: f32) -> Self {
+    pub fn new(position: Vector3<f32>, radius: f32) -> Self {
         Sphere { anchor: Anchor::new(position), radius: radius }
     }
 }
@@ -42,9 +42,9 @@ impl Sphere {
 impl Hittable for Sphere {
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         let oc = ray.origin - self.anchor.position;
-        let a = Float3::dot(&ray.direction, &ray.direction);
-        let b = 2.0 * Float3::dot(&oc, &ray.direction);
-        let c = Float3::dot(&oc, &oc) - self.radius * self.radius;
+        let a = ray.direction.dot(&ray.direction);
+        let b = 2.0 * oc.dot(&ray.direction);
+        let c = oc.dot(&oc) - self.radius * self.radius;
 
         let discriminant = b * b - 4.0 * a * c;
 

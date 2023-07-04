@@ -1,18 +1,18 @@
-use crate::math::vectors::{Float3, Float2, Vector};
+use nalgebra::{Vector3, Vector2};
 
 pub trait Shader {
-    fn frag(screen_pos: &Float2, normal: &Float3) -> Float3;
+    fn frag(screen_pos: &Vector2<f32>, normal: &Vector3<f32>) -> Vector3<f32>;
 }
 
 pub struct TestShader{}
 
 #[allow(unused_variables)]
 impl Shader for TestShader {
-    fn frag(screen_pos: &Float2, normal: &Float3) -> Float3 {
-        let light = Float3::dot(&Float3::new(0.5, 0.5, 0.5), &normal);
-        let norm = (*normal * 0.5 + Float3::one() * 0.5) * light;
+    fn frag(screen_pos: &Vector2<f32>, normal: &Vector3<f32>) -> Vector3<f32> {
+        let light = normal.dot(&Vector3::<f32>::new(0.5, 0.5, -0.5));
+        let norm = (*normal * 0.5 + Vector3::new(0.5, 0.5, 0.5)) * light;
         
-        Float3::new(norm.x, norm.y, norm.z)
+        Vector3::<f32>::new(norm.x, norm.y, norm.z)
     }
 }
 
@@ -20,7 +20,7 @@ pub struct SkyShader{}
 
 #[allow(unused_variables)]
 impl Shader for SkyShader {
-    fn frag(screen_pos: &Float2, normal: &Float3) -> Float3 {
-        Float3::new(screen_pos.x, screen_pos.y, 0.0)
+    fn frag(screen_pos: &Vector2<f32>, normal: &Vector3<f32>) -> Vector3<f32> {
+        *normal * 0.5 + Vector3::new(0.5, 0.5, 0.5)
     }
 }

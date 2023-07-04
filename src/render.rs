@@ -1,4 +1,11 @@
+use crate::scene::SceneData;
+
 struct Render {
-    width: u32,
-    height: u32,
+    
+}
+
+impl Render {
+    pub fn draw(scene: SceneData) {
+
+    }
 }
