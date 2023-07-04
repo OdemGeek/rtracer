@@ -20,7 +20,7 @@ pub struct Camera {
 impl Camera {
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>, up_vector: Vector3<f32>, fov: f32, screen_width: u16, screen_height: u16) -> Self {
         Camera { 
-            position: position, rotation: rotation, direction: euler_to_direction(rotation),
+            position: position, rotation: rotation, direction: euler_to_direction(&rotation),
             up_vector: up_vector, fov: fov,
             screen_width: screen_width, screen_height: screen_height,
             image_distance: 0.0, forward: Vector3::<f32>::zeros(),
@@ -54,7 +54,7 @@ impl Camera {
     pub fn init(&mut self) {
         self.image_distance = (self.screen_height as f32 / 2.0) / f32::tan(f32::to_radians(self.fov) / 2.0);
 
-        self.direction = euler_to_direction(self.rotation);
+        self.direction = euler_to_direction(&self.rotation);
 
         self.forward = self.direction.normalize();
         self.right = self.forward.cross(&self.up_vector).normalize();

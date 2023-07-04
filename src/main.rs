@@ -19,14 +19,19 @@ fn load_image(path: &str) -> image::DynamicImage {
 }
 
 #[allow(dead_code)]
+fn image_to_buffer(image: image::DynamicImage) -> Vec<u32> {
+    image.to_rgb8().pixels().map(|p| {
+        let rgb = p.0;
+        u32_from_u8_rgb(rgb[0], rgb[1], rgb[2])
+    }).collect()
+}
+
+#[allow(dead_code)]
 fn save_image_to_file(texture_buffer: Vec<u32>, image_width: u32, image_height: u32, path: &str){
     // Create image from texture buffer
     let image_buffer: image::ImageBuffer<Rgb<u8>, Vec<_>> = image::ImageBuffer::from_fn(image_width, image_height, |x, y| {
         let pixel = texture_buffer[(y * image_width + x) as usize];
-        let r = ((pixel & 0xFF0000) >> 16) as u8;
-        let g = ((pixel & 0x00FF00) >> 8) as u8;
-        let b = (pixel & 0x0000FF) as u8;
-        Rgb([r, g, b])
+        u8_rgb_from_u32(pixel)
     });
 
     // Save generated image to file
@@ -46,9 +51,24 @@ fn get_current_path() -> Result<String, String> {
     }
 }
 
+#[allow(dead_code)]
+fn u8_rgb_from_u32(c: u32) -> Rgb<u8> {
+    let r = ((c & 0xFF0000) >> 16) as u8;
+    let g = ((c & 0x00FF00) >> 8) as u8;
+    let b = (c & 0x0000FF) as u8;
+    Rgb([r, g, b])
+}
+
 fn u32_from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
     let (r, g, b) = (r as u32, g as u32, b as u32);
     (r << 16) | (g << 8) | b
+}
+
+fn f32_vector3_from_u32(c: u32) -> Vector3<f32> {
+    let r = ((c & 0xFF0000) >> 16) as f32;
+    let g = ((c & 0x00FF00) >> 8) as f32;
+    let b = (c & 0x0000FF) as f32;
+    Vector3::new(r, g, b)
 }
 
 #[allow(dead_code)]
@@ -56,14 +76,18 @@ fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
 
+
 fn main() {
     let start_time = Instant::now();
     
     let imgx = 800;
     let imgy = 800;
 
+    let skybox_image = load_image("sunset_in_the_chalk_quarry_4k.png");
+    let skybox_dimensions = (skybox_image.width(), skybox_image.height());
+    let skybox = image_to_buffer(skybox_image);
+
     // Create a new ImgBuf with width: imgx and height: imgy
-    //let mut imgbuf = image::ImageBuffer::new(imgx, imgy);
     let mut texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
     
     let mut camera = Camera::new(
@@ -138,9 +162,9 @@ fn main() {
             if hit.is_some() {
                 let point = ray.origin + ray.direction * hit.unwrap_or(1.0);
                 let normal = (point - shape.anchor.position).normalize();
-                color = TestShader::frag(&screen_pos, &normal)
+                color = TestShader::frag(&screen_pos, &normal, &skybox, &skybox_dimensions);
             } else {
-                color = SkyShader::frag(&screen_pos, &ray.direction)
+                color = SkyShader::frag(&screen_pos, &ray.direction, &skybox, &skybox_dimensions);
             }
             
             // Convert Float3 to Rgb
