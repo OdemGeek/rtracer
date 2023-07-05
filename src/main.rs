@@ -1,4 +1,4 @@
-use std::{path::Path, env, vec, time::Instant};
+use std::{path::Path, env, vec, time::Instant, sync::Arc};
 use image::Rgb;
 mod math;
 mod shaders;
@@ -10,6 +10,7 @@ mod camera;
 use camera::Camera;
 use minifb::{Key, Window, WindowOptions};
 mod scene;
+use scene::SceneData;
 mod render;
 use rayon::prelude::*;
 
@@ -83,13 +84,20 @@ fn main() {
     let imgx = 800;
     let imgy = 800;
 
+    // Load skybox image
     let skybox_image = load_image("sunset_in_the_chalk_quarry_4k.png");
     let skybox_dimensions = (skybox_image.width(), skybox_image.height());
     let skybox = image_to_buffer(skybox_image);
 
+    // Load scene
+    let sphere = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
+    let scene_data = SceneData::new(vec![sphere]);
+    //let sphere_p = scene_data.add_object(sphere);
+
     // Create a new ImgBuf with width: imgx and height: imgy
     let mut texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
     
+    // Setup camera
     let mut camera = Camera::new(
     Vector3::<f32>::zeros(),
     Vector3::<f32>::new(0.0, 0.0, 0.0),
@@ -99,7 +107,6 @@ fn main() {
     imgy as u16);
     camera.init();
 
-    let shape = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
 
     // Create a window with the specified dimensions
     let mut window = Window::new(
@@ -155,13 +162,14 @@ fn main() {
             // Get camera ray
             let ray = camera.ray_from_screen_point(Vector2::<f32>::new(x as f32, y as f32));
             // Calculate intersection
-            let hit = shape.intersect(&ray);
+            let hit = scene_data.cast_ray(&ray);
 
             // Calculate fragment
             let color;
             if hit.is_some() {
-                let point = ray.origin + ray.direction * hit.unwrap_or(1.0);
-                let normal = (point - shape.anchor.position).normalize();
+                let hit_value = hit.unwrap();
+                let point = ray.origin + ray.direction * hit_value.t;
+                let normal = (point - hit_value.object.anchor.position).normalize();
                 color = TestShader::frag(&screen_pos, &normal, &skybox, &skybox_dimensions);
             } else {
                 color = SkyShader::frag(&screen_pos, &ray.direction, &skybox, &skybox_dimensions);

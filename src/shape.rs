@@ -1,15 +1,17 @@
+use std::sync::Arc;
+
 use crate::math::ray::Ray;
 use nalgebra::Vector3;
 
-pub struct Hit {
+pub struct Hit<'a> {
     pub t: f32,
-    pub normal: Vector3<f32>,
+    pub object: &'a Sphere,
 }
 
 #[allow(dead_code)]
-impl Hit {
-    pub fn new(t: f32, normal: Vector3<f32>) -> Self {
-        Hit { t, normal }
+impl<'a> Hit<'a> {
+    pub fn new(t: f32, object: &'a Sphere) -> Self {
+        Hit { t, object }
     }
 }
 
