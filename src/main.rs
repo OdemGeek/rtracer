@@ -12,8 +12,8 @@ use scene::SceneData;
 mod render;
 use render::Render;
 mod textures;
-use textures::texture::{Texture, TextureSamplingMode};
-use textures::extensions::*;
+//use textures::texture::TextureSamplingMode;
+//use textures::extensions::*;
 
 #[allow(dead_code)]
 fn get_current_path() -> Result<String, String> {
@@ -28,7 +28,6 @@ fn get_current_path() -> Result<String, String> {
 fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
-
 
 fn main() {
     let start_time = Instant::now();
@@ -58,16 +57,15 @@ fn main() {
         };
     }
     
-
     // Load skybox image
-    let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
+    //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
 
     // Load scene
     let sphere = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
     let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 2.0, 4.0), 1.0);
     let mut scene_data = SceneData::new(vec![]);
-    let sphere_p = scene_data.add_object(sphere);
-    let sphere_p2 = scene_data.add_object(sphere2);
+    let _sphere_p = scene_data.add_object(sphere);
+    let _sphere_p2 = scene_data.add_object(sphere2);
     
     // Setup camera
     let mut camera = Camera::new(

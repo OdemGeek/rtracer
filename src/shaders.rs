@@ -1,6 +1,6 @@
 use nalgebra::{Vector3, Vector2};
-use crate::math::extensions::{direction_to_euler, euler_to_direction, f32_vector3_from_u32};
-use std::f32::consts::{PI, FRAC_PI_2};
+//use crate::math::extensions::{direction_to_euler, euler_to_direction, f32_vector3_from_u32};
+//use std::f32::consts::{PI, FRAC_PI_2};
 
 pub trait Shader {
     fn frag(screen_pos: &Vector2<f32>, normal: &Vector3<f32>/*, texture: &Vec<u32>, texture_size: &(u32, u32)*/) -> Vector3<f32>;
@@ -43,6 +43,7 @@ impl Shader for SkyShader {
     }
 }
 
+#[allow(dead_code)]
 fn uv_on_sphere(euler: &Vector3<f32>) -> (f32, f32) {
     let u = 0.5 + f32::atan2(euler.z.to_radians(), euler.x.to_radians()) / (2.0 * std::f32::consts::PI);
     let v = 0.5 + euler.y.to_radians().asin() / std::f32::consts::PI;
