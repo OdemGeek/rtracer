@@ -12,6 +12,7 @@ use scene::SceneData;
 mod render;
 use render::Render;
 mod textures;
+mod pcg;
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
 
@@ -31,7 +32,6 @@ fn time_since_startup(start_time: Instant) -> f32 {
 
 fn main() {
     let start_time = Instant::now();
-
     let mut imgx = 800u32;
     let mut imgy = 800u32;
 
@@ -61,11 +61,15 @@ fn main() {
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
 
     // Load scene
-    let sphere = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
-    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 2.0, 4.0), 1.0);
+    let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0);
+    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
+    let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0);
+    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5);
     let mut scene_data = SceneData::new(vec![]);
     let _sphere_p = scene_data.add_object(sphere);
     let _sphere_p2 = scene_data.add_object(sphere2);
+    let _sphere_p3 = scene_data.add_object(sphere3);
+    let _sphere_p4 = scene_data.add_object(sphere4);
     
     // Setup camera
     let mut camera = Camera::new(
@@ -92,11 +96,13 @@ fn main() {
     // Create a new ImgBuf with width: imgx and height: imgy
     let texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
 
-    let mut render = Render::new(texbuf);
+    let mut render = Render::new(&texbuf);
 
     let mut time_elapsed = start_time.elapsed();
     let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
     let mut mouse_delta;
+
+    let mut frame_index = 0u32;
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         let time_now = Instant::now();
@@ -128,12 +134,13 @@ fn main() {
             camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + camera.rotation);
         }
         camera.init();
-
+        
         // Render image
-        render.draw(&scene_data, &camera);
+        render.draw(&scene_data, &camera, frame_index);
         
         time_elapsed = time_now.elapsed();
         println!("Elapsed: {:.2?}", time_elapsed);
+        frame_index += 1;
 
         // Draw the image in the center of the window
         window

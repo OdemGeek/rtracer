@@ -1,6 +1,7 @@
 use nalgebra::{Vector3, Vector2};
 use crate::math::ray::Ray;
 use crate::math::extensions::euler_to_direction;
+use crate::pcg::random_f32;
 
 pub struct Camera {
     pub position: Vector3<f32>,
@@ -61,14 +62,18 @@ impl Camera {
         self.up = self.right.cross(&self.forward).normalize(); // wtf, why need to find up, it's already found
     }
 
-    pub fn ray_from_screen_point(&self, screen_pos: Vector2<f32>) -> Ray {
+    pub fn ray_from_screen_point(&self, screen_pos: Vector2<f32>, seed: &mut u32) -> Ray {
         let view_plane_half_height = f32::tan(self.fov / 2.0);
         let aspect_ratio = self.screen_width as f32 / self.screen_height as f32;
         let view_plane_half_width = aspect_ratio * view_plane_half_height;
         let view_plane_bottom_left_point = self.direction - self.up * view_plane_half_height - self.right * view_plane_half_width;
         let x_inc_vector = (self.right * 2.0 * view_plane_half_width) / self.screen_width as f32;
         let y_inc_vector = (self.up * 2.0 * view_plane_half_height) / self.screen_height as f32;
-        let view_plane_point = view_plane_bottom_left_point + (self.screen_width as f32 - screen_pos.x) * x_inc_vector + screen_pos.y * y_inc_vector;
+        let random_x_offset = random_f32(seed) - 0.5;
+        let random_y_offset = random_f32(seed) - 0.5;
+        let view_plane_point = view_plane_bottom_left_point
+            + (self.screen_width as f32 - screen_pos.x + random_x_offset)* x_inc_vector
+            + (screen_pos.y + random_y_offset) * y_inc_vector;
         let cast_ray = view_plane_point;
         Ray::new(self.position, cast_ray)
     }
