@@ -33,10 +33,11 @@ impl SceneData {
                 closest_obj = Some(&obj);
             }
         }
-        if closest_obj.is_none() {
-            None
+
+        if let Some(object_unwraped) = closest_obj {
+            Some(Hit::new(closest_hit, &object_unwraped))
         } else {
-            Some(Hit::new(closest_hit, &closest_obj.unwrap()))
+            None
         }
     }
 }

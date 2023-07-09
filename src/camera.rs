@@ -62,9 +62,9 @@ impl Camera {
     }
 
     pub fn ray_from_screen_point(&self, screen_pos: Vector2<f32>) -> Ray {
-        let view_plane_half_width = f32::tan(self.fov / 2.0);
+        let view_plane_half_height = f32::tan(self.fov / 2.0);
         let aspect_ratio = self.screen_width as f32 / self.screen_height as f32;
-        let view_plane_half_height = aspect_ratio * view_plane_half_width;
+        let view_plane_half_width = aspect_ratio * view_plane_half_height;
         let view_plane_bottom_left_point = self.direction - self.up * view_plane_half_height - self.right * view_plane_half_width;
         let x_inc_vector = (self.right * 2.0 * view_plane_half_width) / self.screen_width as f32;
         let y_inc_vector = (self.up * 2.0 * view_plane_half_height) / self.screen_height as f32;
