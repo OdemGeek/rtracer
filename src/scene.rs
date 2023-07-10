@@ -5,10 +5,12 @@ pub struct SceneData {
 }
 
 impl SceneData {
+    #[inline]
     pub fn new(objects: Vec<Sphere>) -> Self {
         SceneData { objects: objects }
     }
 
+    #[inline]
     pub fn add_object(&mut self, object: Sphere) -> &Sphere {
         self.objects.push(object);
         &self.objects.last().unwrap()
@@ -17,6 +19,7 @@ impl SceneData {
     // TODO: Optimize condition and option logic
     // For an example we don't need to return hit in obj.intersect()
     // We should create it here
+    #[inline]
     pub fn cast_ray(&self, ray: &Ray) -> Option<Hit> {
         let mut closest_hit: f32 = f32::INFINITY;
         let mut closest_obj: Option<&Sphere> = None;

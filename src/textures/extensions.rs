@@ -4,11 +4,13 @@ use std::path::Path;
 use image::Rgb;
 
 #[allow(dead_code)]
+#[inline]
 fn load_image(path: &str) -> image::DynamicImage {
     image::open(&Path::new(path)).expect("Failed to load image")
 }
 
 #[allow(dead_code)]
+#[inline]
 fn save_image_to_file(texture_buffer: &Vec<u32>, image_width: u32, image_height: u32, path: &str) {
     // Create image from texture buffer
     let image_buffer: image::ImageBuffer<Rgb<u8>, Vec<_>> = image::ImageBuffer::from_fn(image_width, image_height, |x, y| {
@@ -21,6 +23,7 @@ fn save_image_to_file(texture_buffer: &Vec<u32>, image_width: u32, image_height:
 }
 
 #[allow(dead_code)]
+#[inline]
 fn image_to_buffer(image: image::DynamicImage) -> Vec<u32> {
     image.to_rgb8().pixels().map(|p| {
         let rgb = p.0;
@@ -29,6 +32,7 @@ fn image_to_buffer(image: image::DynamicImage) -> Vec<u32> {
 }
 
 #[allow(dead_code)]
+#[inline]
 pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSamplingMode) -> Texture {
     let buffer = image.to_rgb8().pixels().map(|p| {
         let rgb = p.0;
@@ -39,6 +43,7 @@ pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSampli
 }
 
 #[allow(dead_code)]
+#[inline]
 pub fn file_to_texture(path: &str, sampling_mode: TextureSamplingMode) -> Texture {
     let image = load_image(path);
 
@@ -51,6 +56,7 @@ pub fn file_to_texture(path: &str, sampling_mode: TextureSamplingMode) -> Textur
 }
 
 #[allow(dead_code)]
+#[inline]
 pub fn texture_to_file(texture: Texture, path: &str) {
     save_image_to_file(
     texture.get_buffer_read(),

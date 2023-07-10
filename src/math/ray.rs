@@ -8,6 +8,7 @@ pub struct Ray {
 
 #[allow(dead_code)]
 impl Ray {
+    #[inline]
     pub fn new(origin: Vector3<f32>, direction: Vector3<f32>) -> Self {
         Ray { origin, direction }
     }

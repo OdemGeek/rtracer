@@ -19,6 +19,7 @@ pub struct Camera {
 
 #[allow(dead_code)]
 impl Camera {
+    #[inline]
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>, up_vector: Vector3<f32>, fov: f32, screen_width: u16, screen_height: u16) -> Self {
         Camera { 
             position: position, rotation: rotation, direction: euler_to_direction(&rotation),
@@ -28,26 +29,32 @@ impl Camera {
             right: Vector3::<f32>::zeros(), up: Vector3::<f32>::zeros() }
     }
 
+    #[inline]
     pub fn set_rotation(&mut self, euler_angles: Vector3<f32>) {
         self.rotation = euler_angles;
     }
 
+    #[inline]
     pub fn get_forward(&self) -> Vector3<f32> {
         self.forward
     }
 
+    #[inline]
     pub fn get_right(&self) -> Vector3<f32> {
         self.right
     }
 
+    #[inline]
     pub fn get_up(&self) -> Vector3<f32> {
         self.up
     }
 
+    #[inline]
     pub fn translate(&mut self, translation: Vector3<f32>) {
         self.position = self.position + translation;
     }
 
+    #[inline]
     pub fn translate_relative(&mut self, translation: Vector3<f32>) {
         self.position = self.position + self.forward * translation.z + self.right * translation.x + self.up * translation.y;
     }
@@ -62,6 +69,7 @@ impl Camera {
         self.up = self.right.cross(&self.forward).normalize(); // wtf, why need to find up, it's already found
     }
 
+    #[inline]
     pub fn ray_from_screen_point(&self, screen_pos: Vector2<f32>, seed: &mut u32) -> Ray {
         let view_plane_half_height = f32::tan(self.fov / 2.0);
         let aspect_ratio = self.screen_width as f32 / self.screen_height as f32;

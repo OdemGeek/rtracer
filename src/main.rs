@@ -1,6 +1,7 @@
-use std::{env, vec, time::Instant};
+use std::{env, vec, time::{Instant, Duration}};
 mod math;
 mod shaders;
+use math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
 mod shape;
 use shape::{Sphere};
@@ -13,6 +14,7 @@ mod render;
 use render::Render;
 mod textures;
 mod pcg;
+use rayon::prelude::*;
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
 
@@ -30,6 +32,15 @@ fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
 
+fn print_times(total_frame_elapsed: Duration, logic_elapsed: Duration, render_elapsed: Duration, window_draw_elapsed: Duration) {
+    // Remove previous lines
+    print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+    // Print new lines
+    println!("Time elapsed:\nTotal: {total_frame_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
+}
+
+// TODO: Split logic of drawing screen and generating image in threads
+// We shouldn't wait window to generate image
 fn main() {
     let start_time = Instant::now();
     let mut imgx = 800u32;
@@ -94,20 +105,48 @@ fn main() {
     });
         
     // Create a new ImgBuf with width: imgx and height: imgy
-    let texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
+    //let texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
 
-    let mut render = Render::new(&texbuf);
+    let mut render = Render::new(imgx, imgy);
 
-    let mut time_elapsed = start_time.elapsed();
+    let mut frames_counted = 0;
+    let mut counter_time = Instant::now();
+    let mut frame_start = Instant::now();
+    let mut total_frame_elapsed = Duration::ZERO;
+    let mut logic_elapsed = Duration::ZERO;
+    let mut render_elapsed = Duration::ZERO;
+    let mut window_draw_elapsed = Duration::ZERO;
     let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
     let mut mouse_delta;
 
+    let mut frame_delta = Duration::from_millis(1);
     let mut frame_index = 0u32;
+
+    print_times(total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        let time_now = Instant::now();
+        // Record frame time
+        frame_delta = frame_start.elapsed();
+        total_frame_elapsed += frame_delta;
+        frame_start = Instant::now();
+        
+        // Debug frame timings
+        if counter_time.elapsed().as_secs_f32() > 1.0 {
+            total_frame_elapsed /= frames_counted;
+            logic_elapsed /= frames_counted;
+            render_elapsed /= frames_counted;
+            window_draw_elapsed /= frames_counted;
+            counter_time = Instant::now();
+            frames_counted = 0;
+            print_times(total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
+            total_frame_elapsed = Duration::ZERO;
+            logic_elapsed = Duration::ZERO;
+            render_elapsed = Duration::ZERO;
+            window_draw_elapsed = Duration::ZERO;
+        }
 
         // Handle input
+        let mut need_to_reset = false;
         // Mouse
         let current_mouse_pos = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or(mouse_position);
         mouse_delta = Vector2::new(current_mouse_pos.0 - mouse_position.0, current_mouse_pos.1 - mouse_position.1);
@@ -126,26 +165,47 @@ fn main() {
             (right as i32 - left as i32) as f32,
             (forward as i32 - back as i32) as f32,
             (up as i32 - down as i32) as f32);
-        let move_vector_scaled = move_vector * time_elapsed.as_secs_f32();
+        let move_vector_scaled = move_vector * frame_delta.as_secs_f32();
 
-        camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
+        if move_vector_scaled != Vector3::zeros() {
+            camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
+            need_to_reset |= true;
+        }
 
         if window.get_mouse_down(minifb::MouseButton::Right) {
-            camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + camera.rotation);
+            if mouse_delta != Vector2::zeros() {
+                camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + camera.rotation);
+                need_to_reset |= true;
+            }
         }
         camera.init();
+        // Reset frames
+        if window.is_key_down(Key::R) || need_to_reset {
+            render.reset_accumulated_frames();
+        }
+
+        logic_elapsed += frame_start.elapsed();
         
         // Render image
-        render.draw(&scene_data, &camera, frame_index);
+        let render_start = Instant::now();
+        render.draw(&scene_data, &camera);
+        render_elapsed += render_start.elapsed();
         
-        time_elapsed = time_now.elapsed();
-        println!("Elapsed: {:.2?}", time_elapsed);
-        frame_index += 1;
-
         // Draw the image in the center of the window
+        let window_start = Instant::now();
+        let image_u32_buffer: Vec<u32> = render.texture_buffer.par_iter().map(|p| {
+            u32_from_u8_rgb(
+                (p.x * 255.0) as u8,
+                (p.y * 255.0) as u8,
+                (p.z * 255.0) as u8
+            )
+        }).collect();
         window
-            .update_with_buffer(&render.texture_buffer, imgx as usize, imgy as usize)
+            .update_with_buffer(&image_u32_buffer, imgx as usize, imgy as usize)
             .unwrap();
-        
+        window_draw_elapsed += window_start.elapsed();
+
+        frame_index += 1;
+        frames_counted += 1;
     }
 }

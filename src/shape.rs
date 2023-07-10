@@ -23,6 +23,7 @@ pub struct Anchor {
 }
 
 impl Anchor {
+    #[inline]
     pub fn new(position: Vector3<f32>) -> Self {
         Anchor { position }
     }
@@ -34,12 +35,14 @@ pub struct Sphere {
 }
 
 impl Sphere {
+    #[inline]
     pub fn new(position: Vector3<f32>, radius: f32) -> Self {
         Sphere { anchor: Anchor::new(position), radius: radius }
     }
 }
 
 impl Hittable for Sphere {
+    #[inline]
     fn intersect(&self, ray: &Ray) -> Option<f32> {
         let oc = ray.origin - self.anchor.position;
         let a = ray.direction.dot(&ray.direction);
