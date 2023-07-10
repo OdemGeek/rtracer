@@ -1,6 +1,7 @@
-use std::{env, vec, time::{Instant, Duration}};
+use std::{env, vec, time::{Instant, Duration}, sync::Arc};
 mod math;
 mod shaders;
+use material::Material;
 use math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
 mod shape;
@@ -14,6 +15,7 @@ mod render;
 use render::Render;
 mod textures;
 mod pcg;
+mod material;
 use rayon::prelude::*;
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
@@ -72,10 +74,12 @@ fn main() {
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
 
     // Load scene
-    let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0);
-    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0);
-    let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0);
-    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5);
+    let white_material = Arc::new(Material::new(Vector3::new(1.0, 1.0, 1.0), Vector3::zeros()));
+    let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0));
+    let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
+    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material.clone());
+    let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
+    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material.clone());
     let mut scene_data = SceneData::new(vec![]);
     let _sphere_p = scene_data.add_object(sphere);
     let _sphere_p2 = scene_data.add_object(sphere2);
@@ -84,7 +88,7 @@ fn main() {
     
     // Setup camera
     let mut camera = Camera::new(
-        Vector3::<f32>::zeros(),
+        Vector3::<f32>::new(0.0, 0.5, -3.0),
         Vector3::<f32>::new(0.0, 0.0, 0.0),
         Vector3::<f32>::new(0.0, 1.0, 0.0),
         70.0f32.to_radians(),
@@ -195,9 +199,9 @@ fn main() {
         let window_start = Instant::now();
         let image_u32_buffer: Vec<u32> = render.texture_buffer.par_iter().map(|p| {
             u32_from_u8_rgb(
-                (p.x * 255.0) as u8,
-                (p.y * 255.0) as u8,
-                (p.z * 255.0) as u8
+                (p.x.powf(1.0/2.2) * 255.0) as u8,
+                (p.y.powf(1.0/2.2) * 255.0) as u8,
+                (p.z.powf(1.0/2.2) * 255.0) as u8
             )
         }).collect();
         window

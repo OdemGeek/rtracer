@@ -1,4 +1,4 @@
-use crate::pcg;
+use crate::pcg::{self, random_hemisphere_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::shaders::{Shader, TestShader, SkyShader};
@@ -33,22 +33,34 @@ impl Render {
 
             let screen_pos = Vector2::<f32>::new(x as f32 / camera.screen_width as f32, y as f32 / camera.screen_height as f32);
             // Get camera ray
-            let ray = camera.ray_from_screen_point(Vector2::<f32>::new(x as f32, y as f32), &mut seed);
-            // Calculate intersection
-            let hit = scene.cast_ray(&ray);
-
-            // Calculate fragment
-            let color;
-            if let Some(hit_value) = hit {
-                let point = ray.origin + ray.direction * hit_value.t;
-                let normal = (point - hit_value.object.anchor.position).normalize();
-                color = TestShader::frag(&screen_pos, &point, &normal, &scene);
-            } else {
-                color = SkyShader::frag(&screen_pos, &ray.direction, &ray.direction, &scene);
-            }
+            let mut ray = camera.ray_from_screen_point(Vector2::<f32>::new(x as f32, y as f32), &mut seed);
             
+            let mut color = Vector3::new(1.0, 1.0, 1.0);
+            let mut light = Vector3::zeros();
+
+            const MAX_BOUNCES: u32 = 16;
+            for j in 0..MAX_BOUNCES {
+                // Calculate intersection
+                let hit = scene.cast_ray(&ray);
+                // Calculate fragment
+                if let Some(hit_value) = hit {
+                    let point = ray.origin + ray.direction * hit_value.t;
+                    let normal = (point - hit_value.object.anchor.position).normalize();
+                    ray.origin = point + normal * 0.001;
+                    ray.direction = random_hemisphere_direction(normal, &mut seed);
+
+                    light += hit_value.object.material.emission.component_mul(&color);
+                    color = color.component_mul(&hit_value.object.material.albedo);
+                    //color = color.component_mul(&TestShader::frag(&screen_pos, &point, &normal, &scene));
+                } else {
+                    //color += SkyShader::frag(&screen_pos, &ray.direction, &ray.direction, &scene);
+                    //light += SkyShader::frag(&screen_pos, &ray.direction, &ray.direction, &scene);
+                    break;
+                }
+            }
+
             // Blend generated pixel with old one
-            let blended_color = *pixel * (1.0 - weight) + color * weight;
+            let blended_color = *pixel * (1.0 - weight) + light * weight;
             *pixel = blended_color;
         });
         self.accumulated_frames += 1;

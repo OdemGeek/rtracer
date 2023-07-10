@@ -11,13 +11,15 @@ pub struct TestShader{}
 impl Shader for TestShader {
     #[inline]
     fn frag(screen_pos: &Vector2<f32>, position: &Vector3<f32>, normal: &Vector3<f32>, scene: &SceneData) -> Vector3<f32> {
-        let sun_direction = Vector3::<f32>::new(0.5, 0.5, -0.5);
+        /*let sun_direction = Vector3::<f32>::new(0.5, 0.5, -0.5);
         let sun_ray = Ray::new(position.clone() + sun_direction * 0.01, sun_direction.clone());
         let sun_atten = if scene.cast_ray(&sun_ray).is_some() {0.0f32} else {1.0f32};
         let light = normal.dot(&sun_direction).clamp(0.0, 1.0) * sun_atten;
         
         let norm = (*normal * 0.5 + Vector3::new(0.5, 0.5, 0.5)) * light;
 
+        Vector3::<f32>::new(norm.x, norm.y, norm.z)*/
+        let norm = *normal * 0.5 + Vector3::new(0.5, 0.5, 0.5);
         Vector3::<f32>::new(norm.x, norm.y, norm.z)
     }
 }

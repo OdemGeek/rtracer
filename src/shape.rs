@@ -1,4 +1,6 @@
+use std::sync::Arc;
 use crate::math::ray::Ray;
+use crate::material::Material;
 use nalgebra::Vector3;
 
 pub struct Hit<'a> {
@@ -32,12 +34,13 @@ impl Anchor {
 pub struct Sphere {
     pub anchor: Anchor,
     pub radius: f32,
+    pub material: Arc<Material>,
 }
 
 impl Sphere {
     #[inline]
-    pub fn new(position: Vector3<f32>, radius: f32) -> Self {
-        Sphere { anchor: Anchor::new(position), radius: radius }
+    pub fn new(position: Vector3<f32>, radius: f32, material: Arc<Material>) -> Self {
+        Sphere { anchor: Anchor::new(position), radius: radius, material: material }
     }
 }
 
