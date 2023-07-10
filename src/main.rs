@@ -34,11 +34,11 @@ fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
 
-fn print_times(total_frame_elapsed: Duration, logic_elapsed: Duration, render_elapsed: Duration, window_draw_elapsed: Duration) {
+fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration, logic_elapsed: Duration, render_elapsed: Duration, window_draw_elapsed: Duration) {
     // Remove previous lines
     print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
     // Print new lines
-    println!("Time elapsed:\nTotal: {total_frame_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
+    println!("Time elapsed ({accumulation_time:.2?}):\nTotal: {total_frame_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
 }
 
 // TODO: Split logic of drawing screen and generating image in threads
@@ -114,6 +114,7 @@ fn main() {
     let mut render = Render::new(imgx, imgy);
 
     let mut frames_counted = 0;
+    let mut accumulation_time = Instant::now();
     let mut counter_time = Instant::now();
     let mut frame_start = Instant::now();
     let mut total_frame_elapsed = Duration::ZERO;
@@ -126,7 +127,7 @@ fn main() {
     let mut frame_delta = Duration::from_millis(1);
     let mut frame_index = 0u32;
 
-    print_times(total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -142,7 +143,7 @@ fn main() {
             window_draw_elapsed /= frames_counted;
             counter_time = Instant::now();
             frames_counted = 0;
-            print_times(total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
+            print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
             total_frame_elapsed = Duration::ZERO;
             logic_elapsed = Duration::ZERO;
             render_elapsed = Duration::ZERO;
@@ -186,6 +187,7 @@ fn main() {
         // Reset frames
         if window.is_key_down(Key::R) || need_to_reset {
             render.reset_accumulated_frames();
+            accumulation_time = Instant::now();
         }
 
         logic_elapsed += frame_start.elapsed();
