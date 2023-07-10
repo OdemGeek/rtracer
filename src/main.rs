@@ -34,11 +34,15 @@ fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
 
-fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration, logic_elapsed: Duration, render_elapsed: Duration, window_draw_elapsed: Duration) {
+fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
+        logic_elapsed: Duration, render_elapsed: Duration,
+        window_draw_elapsed: Duration, sample_count: u32) {
     // Remove previous lines
-    print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+    print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
     // Print new lines
-    println!("Time elapsed ({accumulation_time:.2?}):\nTotal: {total_frame_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
+    println!("Render time: {accumulation_time:.2?}\nSample count: {sample_count:?}");
+    println!("Current frame timings:\nTotal: {total_frame_elapsed:.2?}");
+    println!("Logic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
 }
 
 // TODO: Split logic of drawing screen and generating image in threads
@@ -47,12 +51,30 @@ fn main() {
     let start_time = Instant::now();
     let mut imgx = 800u32;
     let mut imgy = 800u32;
-
+    let mut max_samples = 0u32;
+    
     // Get command line arguments
     let args: Vec<String> = env::args().collect();
 
     // Check if the required number of arguments is provided
-    if args.len() == 3 {
+    if args.len() == 2 {
+        max_samples = match args[1].parse() {
+            Ok(value) => value,
+            Err(_) => {
+                println!("Invalid samples argument");
+                return;
+            }
+        };
+    } else if args.len() == 4 {
+        max_samples = match args[3].parse() {
+            Ok(value) => value,
+            Err(_) => {
+                println!("Invalid samples argument");
+                return;
+            }
+        };
+    }
+    if args.len() >= 3 {
         // Parse the arguments as integers
         imgx = match args[1].parse() {
             Ok(value) => value,
@@ -74,8 +96,8 @@ fn main() {
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
 
     // Load scene
-    let white_material = Arc::new(Material::new(Vector3::new(1.0, 1.0, 1.0), Vector3::zeros()));
-    let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0));
+    let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
+    let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0, 0.99, 0.0));
     let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
     let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material.clone());
     let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
@@ -127,7 +149,7 @@ fn main() {
     let mut frame_delta = Duration::from_millis(1);
     let mut frame_index = 0u32;
 
-    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0);
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -141,9 +163,9 @@ fn main() {
             logic_elapsed /= frames_counted;
             render_elapsed /= frames_counted;
             window_draw_elapsed /= frames_counted;
-            counter_time = Instant::now();
+            counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
             frames_counted = 0;
-            print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed);
+            print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, render.get_accumulated_frames_count());
             total_frame_elapsed = Duration::ZERO;
             logic_elapsed = Duration::ZERO;
             render_elapsed = Duration::ZERO;
@@ -194,7 +216,9 @@ fn main() {
         
         // Render image
         let render_start = Instant::now();
-        render.draw(&scene_data, &camera);
+        if render.get_accumulated_frames_count() < max_samples || max_samples == 0 {
+            render.draw(&scene_data, &camera);
+        }
         render_elapsed += render_start.elapsed();
         
         // Draw the image in the center of the window

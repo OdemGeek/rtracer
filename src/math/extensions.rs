@@ -55,3 +55,18 @@ pub fn f32_vector3_from_u32(c: u32) -> Vector3<f32> {
     let b = (c & 0x0000FF) as f32;
     Vector3::new(r, g, b) / 255.0
 }
+
+#[allow(dead_code)]
+#[inline(always)]
+pub fn reflect(incident: &Vector3<f32>, normal: &Vector3<f32>) -> Vector3<f32> {
+    incident - 2.0 * incident.dot(normal) * normal
+}
+
+#[allow(dead_code)]
+#[inline(always)]
+pub fn lerp_vector3(a: &Vector3<f32>, b: &Vector3<f32>, t: f32) -> Vector3<f32> {
+    a * (1.0 - t) + b * t
+    //*pixel * (1.0 - weight) + light * weight
+    // a + t * (b - a); // fast method
+    // (1 - t) * a + t * b; // precise method
+}

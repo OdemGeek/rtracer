@@ -1,4 +1,4 @@
-use crate::pcg::{self, random_hemisphere_direction};
+use crate::pcg::{self, random_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::shaders::{Shader, TestShader, SkyShader};
@@ -46,21 +46,26 @@ impl Render {
                 if let Some(hit_value) = hit {
                     let point = ray.origin + ray.direction * hit_value.t;
                     let normal = (point - hit_value.object.anchor.position).normalize();
-                    ray.origin = point + normal * 0.001;
-                    ray.direction = random_hemisphere_direction(normal, &mut seed);
 
-                    light += hit_value.object.material.emission.component_mul(&color);
-                    color = color.component_mul(&hit_value.object.material.albedo);
+                    ray.origin = point + normal * 0.001;
+                    let reflection = reflect(&ray.direction, &normal);
+                    let diffuse = (normal + random_direction(&mut seed)).normalize();
+                    //ray.direction = lerp_vector3(&reflection, &diffuse, 0.9).normalize();
+                    ray.direction = diffuse;
+                    
+                    let material = &hit_value.object.material;
+                    //light += material.emission.component_mul(&color);
+                    color = color.component_mul(&material.albedo) * 0.25;
                     //color = color.component_mul(&TestShader::frag(&screen_pos, &point, &normal, &scene));
                 } else {
-                    //color += SkyShader::frag(&screen_pos, &ray.direction, &ray.direction, &scene);
-                    //light += SkyShader::frag(&screen_pos, &ray.direction, &ray.direction, &scene);
+                    light += Vector3::new(0.2, 0.2, 0.2).component_mul(&color);
+                    //color += Vector3::new(0.2, 0.2, 0.2);
                     break;
                 }
             }
 
             // Blend generated pixel with old one
-            let blended_color = *pixel * (1.0 - weight) + light * weight;
+            let blended_color = lerp_vector3(pixel, &light, weight);
             *pixel = blended_color;
         });
         self.accumulated_frames += 1;
@@ -69,5 +74,10 @@ impl Render {
     #[inline]
     pub fn reset_accumulated_frames(&mut self) {
         self.accumulated_frames = 0;
+    }
+
+    #[inline]
+    pub fn get_accumulated_frames_count(&self) -> u32 {
+        self.accumulated_frames
     }
 }
