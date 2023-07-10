@@ -48,7 +48,7 @@ fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
 // TODO: Split logic of drawing screen and generating image in threads
 // We shouldn't wait window to generate image
 fn main() {
-    let start_time = Instant::now();
+    let _start_time = Instant::now();
     let mut imgx = 800u32;
     let mut imgy = 800u32;
     let mut max_samples = 0u32;
@@ -117,8 +117,8 @@ fn main() {
         imgx as u16,
         imgy as u16);
     camera.init();
-        
-        
+    
+    
     // Create a window with the specified dimensions
     let mut window = Window::new(
         "Rust Window",
@@ -146,8 +146,7 @@ fn main() {
     let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
     let mut mouse_delta;
 
-    let mut frame_delta = Duration::from_millis(1);
-    let mut frame_index = 0u32;
+    let mut frame_delta;
 
     print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0);
     // Loop until the window is closed
@@ -235,7 +234,6 @@ fn main() {
             .unwrap();
         window_draw_elapsed += window_start.elapsed();
 
-        frame_index += 1;
         frames_counted += 1;
     }
 }
