@@ -45,10 +45,10 @@ impl Render {
                     let normal = (point - hit_value.object.anchor.position).normalize();
 
                     ray.origin = point + normal * 0.001;
-                    //let reflection = reflect(&ray.direction, &normal);
+                    let reflection = reflect(&ray.direction, &normal);
                     let diffuse = (normal + random_direction(&mut seed)).normalize();
-                    //ray.direction = lerp_vector3(&reflection, &diffuse, 0.9).normalize();
-                    ray.direction = diffuse;
+                    ray.direction = lerp_vector3(&reflection, &diffuse, 0.8).normalize();
+                    //ray.direction = diffuse;
                     
                     let material = &hit_value.object.material;
                     light += material.emission.component_mul(&color);
