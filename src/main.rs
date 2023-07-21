@@ -5,7 +5,7 @@ use material::Material;
 use math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
 mod shape;
-use shape::{Sphere};
+use shape::Sphere;
 mod camera;
 use camera::Camera;
 use minifb::{Key, Window, WindowOptions};
@@ -36,9 +36,12 @@ fn time_since_startup(start_time: Instant) -> f32 {
 
 fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
         logic_elapsed: Duration, render_elapsed: Duration,
-        window_draw_elapsed: Duration, sample_count: u32) {
+        window_draw_elapsed: Duration, sample_count: u32,
+        clear_console: bool) {
     // Remove previous lines
-    print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+    if clear_console {
+        print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+    }
     // Print new lines
     println!("Render time: {accumulation_time:.2?}\nSample count: {sample_count:?}");
     println!("Current frame timings:\nTotal: {total_frame_elapsed:.2?}");
@@ -137,6 +140,7 @@ fn main() {
 
     let mut frames_counted = 0;
     let mut accumulation_time = Instant::now();
+    let mut accumulated_time: Duration = Duration::ZERO;
     let mut counter_time = Instant::now();
     let mut frame_start = Instant::now();
     let mut total_frame_elapsed = Duration::ZERO;
@@ -148,7 +152,8 @@ fn main() {
 
     let mut frame_delta;
 
-    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0);
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
+    
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -164,7 +169,7 @@ fn main() {
             window_draw_elapsed /= frames_counted;
             counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
             frames_counted = 0;
-            print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, render.get_accumulated_frames_count());
+            print_times(accumulated_time, total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, render.get_accumulated_frames_count(), true);
             total_frame_elapsed = Duration::ZERO;
             logic_elapsed = Duration::ZERO;
             render_elapsed = Duration::ZERO;
@@ -217,6 +222,7 @@ fn main() {
         let render_start = Instant::now();
         if render.get_accumulated_frames_count() < max_samples || max_samples == 0 {
             render.draw(&scene_data, &camera);
+            accumulated_time = accumulation_time.elapsed();
         }
         render_elapsed += render_start.elapsed();
         
