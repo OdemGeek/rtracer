@@ -1,4 +1,6 @@
-use std::{env, vec, time::{Instant, Duration}, sync::Arc};
+use std::{env, vec, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}};
+use std::thread;
+use std::sync::atomic::Ordering;
 mod math;
 mod shaders;
 use material::Material;
@@ -16,7 +18,7 @@ use render::Render;
 mod textures;
 mod pcg;
 mod material;
-use rayon::prelude::*;
+
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
 
@@ -48,8 +50,23 @@ fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
     println!("Logic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
 }
 
-// TODO: Split logic of drawing screen and generating image in threads
-// We shouldn't wait window to generate image
+struct RenderData {
+    render: Render,
+    max_samples: u32,
+    scene_data: SceneData,
+    camera: Camera,
+    accumulated_time: Duration,
+    accumulation_time: Instant,
+    render_elapsed: Duration,
+    render_frames_counted: u32,
+}
+
+impl RenderData {
+    pub fn draw(&mut self) {
+        self.render.draw(&self.scene_data, &self.camera);
+    }
+}
+
 fn main() {
     let _start_time = Instant::now();
     let mut imgx = 800u32;
@@ -132,28 +149,72 @@ fn main() {
     .unwrap_or_else(|e| {
         panic!("{}", e);
     });
-        
-    // Create a new ImgBuf with width: imgx and height: imgy
-    //let texbuf: Vec<u32> = vec![0; (imgx * imgy) as usize];
+    // Limit window fps to 120
+    window.limit_update_rate(Some(Duration::from_secs_f32(1.0 / 120.0)));
 
-    let mut render = Render::new(imgx, imgy);
+    let render = Render::new(imgx, imgy);
+    let accumulation_time = Instant::now();
+    let accumulated_time = Duration::ZERO;
+    let render_elapsed = Duration::ZERO;
 
     let mut frames_counted = 0;
-    let mut accumulation_time = Instant::now();
-    let mut accumulated_time: Duration = Duration::ZERO;
     let mut counter_time = Instant::now();
     let mut frame_start = Instant::now();
     let mut total_frame_elapsed = Duration::ZERO;
     let mut logic_elapsed = Duration::ZERO;
-    let mut render_elapsed = Duration::ZERO;
     let mut window_draw_elapsed = Duration::ZERO;
     let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
     let mut mouse_delta;
-
     let mut frame_delta;
 
+    // Create a mutex to protect the shared data
+    let mut output_buffer = render.texture_buffer.clone();
+    let render_data = Arc::new(Mutex::new(
+        RenderData { render, max_samples,
+            scene_data, camera, accumulated_time,
+            accumulation_time, render_elapsed,
+            render_frames_counted: 0,
+    }));
+    let pause = Arc::new(AtomicBool::new(false));
+    let stop = Arc::new(AtomicBool::new(false));
+
+    // Create a condition variable to signal the thread to resume
+    let condvar = Arc::new(Condvar::new());
+
+    // Clone references to the mutex and condition variable for the thread to use
+    let thread_render_data = Arc::clone(&render_data);
+    let thread_condvar = Arc::clone(&condvar);
+    let thread_pause = Arc::clone(&pause);
+    let thread_stop = Arc::clone(&stop);
+
     print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
+
+    let render_thread = thread::spawn(move || {
+        // Access the shared data via the mutex
+        let mut data = thread_render_data.lock().unwrap();
+        
+        loop {
+            let render_start = Instant::now();
+            // Check if the thread is paused
+            while thread_pause.load(Ordering::Relaxed) {
+                data = thread_condvar.wait(data).unwrap();
+            }
+            // Kill loop if need to stop thread
+            if thread_stop.load(Ordering::Relaxed) {
+                break;
+            }
+            // Perform your thread's logic here, using the shared data
+            // Render image
+            if data.render.get_accumulated_frames_count() < data.max_samples || data.max_samples == 0 {
+                data.draw();
+                data.accumulated_time = data.accumulation_time.elapsed();
+            }
+            data.render_elapsed += render_start.elapsed();
+            data.render_frames_counted += 1;
+        }
+    });
     
+    let mut image_u32_buffer: Vec<u32>;
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -161,74 +222,83 @@ fn main() {
         total_frame_elapsed += frame_delta;
         frame_start = Instant::now();
         
-        // Debug frame timings
-        if counter_time.elapsed().as_secs_f32() > 1.0 {
-            total_frame_elapsed /= frames_counted;
-            logic_elapsed /= frames_counted;
-            render_elapsed /= frames_counted;
-            window_draw_elapsed /= frames_counted;
-            counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
-            frames_counted = 0;
-            print_times(accumulated_time, total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, render.get_accumulated_frames_count(), true);
-            total_frame_elapsed = Duration::ZERO;
-            logic_elapsed = Duration::ZERO;
-            render_elapsed = Duration::ZERO;
-            window_draw_elapsed = Duration::ZERO;
-        }
+        {
+            pause.store(true, Ordering::Relaxed);
+            let mut data = render_data.lock().unwrap();
+            
+            // Debug frame timings
+            if counter_time.elapsed().as_secs_f32() > 1.0 {
+                total_frame_elapsed /= frames_counted;
+                logic_elapsed /= frames_counted;
+                let render_frames_counted = data.render_frames_counted;
+                if render_frames_counted > 0 {
+                    data.render_elapsed /= render_frames_counted;
+                }
+                window_draw_elapsed /= frames_counted;
+                counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
+                frames_counted = 0;
+                data.render_frames_counted = 0;
+                print_times(data.accumulated_time, total_frame_elapsed, logic_elapsed, data.render_elapsed, window_draw_elapsed, data.render.get_accumulated_frames_count(), true);
+                total_frame_elapsed = Duration::ZERO;
+                logic_elapsed = Duration::ZERO;
+                data.render_elapsed = Duration::ZERO;
+                window_draw_elapsed = Duration::ZERO;
+            }
 
-        // Handle input
-        let mut need_to_reset = false;
-        // Mouse
-        let current_mouse_pos = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or(mouse_position);
-        mouse_delta = Vector2::new(current_mouse_pos.0 - mouse_position.0, current_mouse_pos.1 - mouse_position.1);
-        mouse_position = current_mouse_pos;
-        // Keyboard
-        // Move speed
-        let move_speed = if window.is_key_down(Key::LeftShift) {10.0} else {3.0};
-        // Move vector
-        let right = window.is_key_down(Key::D);
-        let left = window.is_key_down(Key::A);
-        let forward = window.is_key_down(Key::W);
-        let back = window.is_key_down(Key::S);
-        let up = window.is_key_down(Key::E);
-        let down = window.is_key_down(Key::Q);
-        let move_vector = Vector3::new(
-            (right as i32 - left as i32) as f32,
-            (forward as i32 - back as i32) as f32,
-            (up as i32 - down as i32) as f32);
-        let move_vector_scaled = move_vector * frame_delta.as_secs_f32();
+            // Handle input
+            let mut need_to_reset = false;
+            // Mouse
+            let current_mouse_pos = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or(mouse_position);
+            mouse_delta = Vector2::new(current_mouse_pos.0 - mouse_position.0, current_mouse_pos.1 - mouse_position.1);
+            mouse_position = current_mouse_pos;
+            // Keyboard
+            // Move speed
+            let move_speed = if window.is_key_down(Key::LeftShift) {10.0} else {3.0};
+            // Move vector
+            let right = window.is_key_down(Key::D);
+            let left = window.is_key_down(Key::A);
+            let forward = window.is_key_down(Key::W);
+            let back = window.is_key_down(Key::S);
+            let up = window.is_key_down(Key::E);
+            let down = window.is_key_down(Key::Q);
+            let move_vector = Vector3::new(
+                (right as i32 - left as i32) as f32,
+                (forward as i32 - back as i32) as f32,
+                (up as i32 - down as i32) as f32);
+            let move_vector_scaled = move_vector * frame_delta.as_secs_f32();
 
-        if move_vector_scaled != Vector3::zeros() {
-            camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
-            need_to_reset |= true;
-        }
-
-        if window.get_mouse_down(minifb::MouseButton::Right) {
-            if mouse_delta != Vector2::zeros() {
-                camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + camera.rotation);
+            if move_vector_scaled != Vector3::zeros() {
+                data.camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
                 need_to_reset |= true;
             }
-        }
-        camera.init();
-        // Reset frames
-        if window.is_key_down(Key::R) || need_to_reset {
-            render.reset_accumulated_frames();
-            accumulation_time = Instant::now();
+    
+            if window.get_mouse_down(minifb::MouseButton::Right) {
+                if mouse_delta != Vector2::zeros() {
+                    let rotation = data.camera.rotation;
+                    data.camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
+                    need_to_reset |= true;
+                }
+            }
+            data.camera.init();
+            // Reset frames
+            if window.is_key_down(Key::R) || need_to_reset {
+                data.render.reset_accumulated_frames();
+                data.accumulation_time = Instant::now();
+            }
+
+            if need_to_reset {
+
+            }
+
+            output_buffer.clone_from_slice(&data.render.texture_buffer);
+            pause.store(false, Ordering::Relaxed);
+            condvar.notify_one();
+            logic_elapsed += frame_start.elapsed();
         }
 
-        logic_elapsed += frame_start.elapsed();
-        
-        // Render image
-        let render_start = Instant::now();
-        if render.get_accumulated_frames_count() < max_samples || max_samples == 0 {
-            render.draw(&scene_data, &camera);
-            accumulated_time = accumulation_time.elapsed();
-        }
-        render_elapsed += render_start.elapsed();
-        
         // Draw the image in the center of the window
         let window_start = Instant::now();
-        let image_u32_buffer: Vec<u32> = render.texture_buffer.par_iter().map(|p| {
+        image_u32_buffer = output_buffer.iter().map(|p| {
             u32_from_u8_rgb(
                 (p.x.powf(1.0/2.2) * 255.0) as u8,
                 (p.y.powf(1.0/2.2) * 255.0) as u8,
@@ -242,4 +312,7 @@ fn main() {
 
         frames_counted += 1;
     }
+
+    stop.store(true, Ordering::Relaxed);
+    render_thread.join().unwrap();
 }
