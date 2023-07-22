@@ -6,8 +6,8 @@ mod shaders;
 use material::Material;
 use math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
-mod shape;
-use shape::Sphere;
+mod entity;
+use entity::sphere::Sphere;
 mod camera;
 use camera::Camera;
 use minifb::{Key, Window, WindowOptions};
@@ -16,7 +16,6 @@ use scene::SceneData;
 mod render;
 use render::Render;
 mod textures;
-mod pcg;
 mod material;
 
 //use textures::texture::TextureSamplingMode;

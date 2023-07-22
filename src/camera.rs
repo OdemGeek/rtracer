@@ -1,7 +1,7 @@
 use nalgebra::{Vector3, Vector2};
 use crate::math::ray::Ray;
 use crate::math::extensions::euler_to_direction;
-use crate::pcg::random_f32;
+use crate::math::pcg::random_f32;
 
 pub struct Camera {
     pub position: Vector3<f32>,

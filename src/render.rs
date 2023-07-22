@@ -1,4 +1,4 @@
-use crate::pcg::{self, random_direction};
+use crate::math::pcg::{self, random_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
 //use crate::shaders::{Shader, TestShader, SkyShader};

@@ -1,0 +1,19 @@
+use super::sphere::Sphere;
+use crate::math::ray::Ray;
+
+pub struct Hit<'a> {
+    pub t: f32,
+    pub object: &'a Sphere,
+}
+
+#[allow(dead_code)]
+impl<'a> Hit<'a> {
+    pub fn new(t: f32, object: &'a Sphere) -> Self {
+        Hit { t, object }
+    }
+}
+
+pub trait Hittable{
+    //fn intersect(&self, ray: &Ray) -> Hit;
+    fn intersect(&self, ray: &Ray) -> Option<f32>;
+}

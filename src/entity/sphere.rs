@@ -1,35 +1,9 @@
-use std::sync::Arc;
-use crate::math::ray::Ray;
+use super::anchor::Anchor;
+use super::hit::Hittable;
 use crate::material::Material;
+use crate::math::ray::Ray;
+use std::sync::Arc;
 use nalgebra::Vector3;
-
-pub struct Hit<'a> {
-    pub t: f32,
-    pub object: &'a Sphere,
-}
-
-#[allow(dead_code)]
-impl<'a> Hit<'a> {
-    pub fn new(t: f32, object: &'a Sphere) -> Self {
-        Hit { t, object }
-    }
-}
-
-pub trait Hittable{
-    //fn intersect(&self, ray: &Ray) -> Hit;
-    fn intersect(&self, ray: &Ray) -> Option<f32>;
-}
-
-pub struct Anchor {
-    pub position: Vector3<f32>
-}
-
-impl Anchor {
-    #[inline]
-    pub fn new(position: Vector3<f32>) -> Self {
-        Anchor { position }
-    }
-}
 
 pub struct Sphere {
     pub anchor: Anchor,
