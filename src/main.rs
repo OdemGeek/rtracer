@@ -66,6 +66,8 @@ impl RenderData {
     }
 }
 
+// TODO: render thread pause is too long in logic stage
+// Need to copy data, unlock data, process copy of it
 fn main() {
     let _start_time = Instant::now();
     let mut imgx = 800u32;
@@ -130,14 +132,12 @@ fn main() {
     // Setup camera
     let mut camera = Camera::new(
         Vector3::<f32>::new(0.0, 0.5, -3.0),
-        Vector3::<f32>::new(0.0, 0.0, 0.0),
-        Vector3::<f32>::new(0.0, 1.0, 0.0),
+        Vector3::zeros(),
         70.0f32.to_radians(),
         imgx as u16,
         imgy as u16);
     camera.init();
-    
-    
+
     // Create a window with the specified dimensions
     let mut window = Window::new(
         "Rust Window",
@@ -267,14 +267,14 @@ fn main() {
             let move_vector_scaled = move_vector * frame_delta.as_secs_f32();
 
             if move_vector_scaled != Vector3::zeros() {
-                data.camera.translate_relative(Vector3::new(-move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
+                data.camera.anchor.translate_relative(Vector3::new(move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
                 need_to_reset |= true;
             }
     
             if window.get_mouse_down(minifb::MouseButton::Right) {
                 if mouse_delta != Vector2::zeros() {
-                    let rotation = data.camera.rotation;
-                    data.camera.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
+                    let rotation = data.camera.anchor.rotation;
+                    data.camera.anchor.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
                     need_to_reset |= true;
                 }
             }
@@ -283,10 +283,6 @@ fn main() {
             if window.is_key_down(Key::R) || need_to_reset {
                 data.render.reset_accumulated_frames();
                 data.accumulation_time = Instant::now();
-            }
-
-            if need_to_reset {
-
             }
 
             output_buffer.clone_from_slice(&data.render.texture_buffer);

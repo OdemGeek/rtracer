@@ -14,7 +14,7 @@ pub struct Sphere {
 impl Sphere {
     #[inline]
     pub fn new(position: Vector3<f32>, radius: f32, material: Arc<Material>) -> Self {
-        Sphere { anchor: Anchor::new(position), radius: radius, material: material }
+        Sphere { anchor: Anchor::new(position, Vector3::zeros()), radius: radius, material: material }
     }
 }
 
