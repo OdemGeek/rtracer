@@ -1,5 +1,5 @@
 use super::anchor::Anchor;
-use super::hit::Hittable;
+use super::hittable::Hittable;
 use crate::material::Material;
 use crate::math::ray::Ray;
 use std::sync::Arc;
@@ -47,5 +47,10 @@ impl Hittable for Sphere {
         } else {
             None
         }
+    }
+
+    #[inline]
+    fn normal(&self, point: &Vector3<f32>) -> Vector3<f32> {
+        (point - self.anchor.position).normalize()
     }
 }

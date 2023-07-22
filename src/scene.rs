@@ -1,4 +1,4 @@
-use crate::{math::ray::Ray, entity::{sphere::Sphere, hit::{Hit, Hittable}}};
+use crate::{math::ray::Ray, entity::{sphere::Sphere, hit::Hit, hittable::Hittable}};
 
 pub struct SceneData {
     pub objects: Vec<Sphere>,

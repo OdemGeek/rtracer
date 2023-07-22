@@ -1,3 +1,4 @@
+use crate::entity::hittable::Hittable;
 use crate::math::pcg::{self, random_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
@@ -41,16 +42,15 @@ impl Render {
                 let hit = scene.cast_ray(&ray);
                 // Calculate fragment
                 if let Some(hit_value) = hit {
+                    let material = &hit_value.object.material;
                     let point = ray.origin + ray.direction * hit_value.t;
-                    let normal = (point - hit_value.object.anchor.position).normalize();
+                    let normal = hit_value.object.normal(&point);
 
                     ray.origin = point + normal * 0.001;
                     let reflection = reflect(&ray.direction, &normal);
                     let diffuse = (normal + random_direction(&mut seed)).normalize();
-                    ray.direction = lerp_vector3(&reflection, &diffuse, 0.8).normalize();
-                    //ray.direction = diffuse;
+                    ray.direction = lerp_vector3(&reflection, &diffuse, material.roughness).normalize();
                     
-                    let material = &hit_value.object.material;
                     light += material.emission.component_mul(&color);
                     color = color.component_mul(&material.albedo) * 0.25;
                 } else {

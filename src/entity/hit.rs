@@ -12,8 +12,3 @@ impl<'a> Hit<'a> {
         Hit { t, object }
     }
 }
-
-pub trait Hittable{
-    //fn intersect(&self, ray: &Ray) -> Hit;
-    fn intersect(&self, ray: &Ray) -> Option<f32>;
-}
