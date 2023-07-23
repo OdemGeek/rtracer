@@ -12,7 +12,7 @@ pub fn hash(input: u32) -> u32 {
 #[allow(dead_code)]
 #[inline]
 pub fn random_f32(seed: &mut u32) -> f32 {
-    *seed = hash(seed.clone());
+    *seed = hash(*seed);
     *seed as f32 / u32::MAX as f32
 }
 

@@ -120,9 +120,9 @@ fn main() {
     let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
     let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0, 0.99, 0.0));
     let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
-    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material.clone());
+    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material);
     let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
-    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material.clone());
+    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material);
     let mut scene_data = SceneData::new(vec![]);
     let _sphere_p = scene_data.add_object(sphere);
     let _sphere_p2 = scene_data.add_object(sphere2);
@@ -271,12 +271,10 @@ fn main() {
                 need_to_reset |= true;
             }
     
-            if window.get_mouse_down(minifb::MouseButton::Right) {
-                if mouse_delta != Vector2::zeros() {
-                    let rotation = data.camera.anchor.rotation;
-                    data.camera.anchor.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
-                    need_to_reset |= true;
-                }
+            if window.get_mouse_down(minifb::MouseButton::Right) && mouse_delta != Vector2::zeros() {
+                let rotation = data.camera.anchor.rotation;
+                data.camera.anchor.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
+                need_to_reset |= true;
             }
             data.camera.init();
             // Reset frames

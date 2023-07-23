@@ -6,12 +6,12 @@ use image::Rgb;
 #[allow(dead_code)]
 #[inline]
 fn load_image(path: &str) -> image::DynamicImage {
-    image::open(&Path::new(path)).expect("Failed to load image")
+    image::open(Path::new(path)).expect("Failed to load image")
 }
 
 #[allow(dead_code)]
 #[inline]
-fn save_image_to_file(texture_buffer: &Vec<u32>, image_width: u32, image_height: u32, path: &str) {
+fn save_image_to_file(texture_buffer: &[u32], image_width: u32, image_height: u32, path: &str) {
     // Create image from texture buffer
     let image_buffer: image::ImageBuffer<Rgb<u8>, Vec<_>> = image::ImageBuffer::from_fn(image_width, image_height, |x, y| {
         let pixel = texture_buffer[(y * image_width + x) as usize];

@@ -15,7 +15,7 @@ impl Anchor {
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>) -> Self {
         let rotation_matrix = Rotation3::from_euler_angles(rotation.x, rotation.y, rotation.z);
         Anchor { position, rotation,
-            rotation_matrix: rotation_matrix,
+            rotation_matrix,
             forward: rotation_matrix * Vector3::z_axis(),
             right: rotation_matrix * Vector3::x_axis(),
             up: rotation_matrix * Vector3::y_axis(),
@@ -52,7 +52,7 @@ impl Anchor {
 
     #[inline]
     pub fn translate(&mut self, translation: Vector3<f32>) {
-        self.position = self.position + translation;
+        self.position += translation;
     }
     
     #[inline]

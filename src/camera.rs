@@ -17,9 +17,9 @@ impl Camera {
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>, fov: f32, screen_width: u16, screen_height: u16) -> Self {
         Camera {
             anchor: Anchor::new(position, rotation),
-            fov: fov,
-            screen_width: screen_width,
-            screen_height: screen_height,
+            fov,
+            screen_width,
+            screen_height,
             image_distance: 0.0,
         }
     }

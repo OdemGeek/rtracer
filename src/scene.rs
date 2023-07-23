@@ -7,13 +7,13 @@ pub struct SceneData {
 impl SceneData {
     #[inline]
     pub fn new(objects: Vec<Sphere>) -> Self {
-        SceneData { objects: objects }
+        SceneData { objects }
     }
 
     #[inline]
     pub fn add_object(&mut self, object: Sphere) -> &Sphere {
         self.objects.push(object);
-        &self.objects.last().unwrap()
+        self.objects.last().unwrap()
     }
 
     pub fn cast_ray(&self, ray: &Ray) -> Option<Hit> {

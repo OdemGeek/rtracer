@@ -15,7 +15,7 @@ pub struct Sphere {
 impl Sphere {
     #[inline]
     pub fn new(position: Vector3<f32>, radius: f32, material: Arc<Material>) -> Self {
-        Sphere { anchor: Anchor::new(position, Vector3::zeros()), radius: radius, material: material }
+        Sphere { anchor: Anchor::new(position, Vector3::zeros()), radius, material }
     }
 }
 
@@ -42,9 +42,9 @@ impl Hittable for Sphere {
         if t1 >= 0.0 && t2 >= 0.0 {
             Some(Hit::new(t1.min(t2), self))
         } else if t1 >= 0.0 {
-            Some(Hit::new(t1.min(t2), self))
+            Some(Hit::new(t1, self))
         } else if t2 >= 0.0 {
-            Some(Hit::new(t1.min(t2), self))
+            Some(Hit::new(t2, self))
         } else {
             None
         }
