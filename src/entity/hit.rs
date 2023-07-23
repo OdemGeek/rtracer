@@ -1,5 +1,4 @@
 use super::sphere::Sphere;
-use crate::math::ray::Ray;
 
 pub struct Hit<'a> {
     pub t: f32,
