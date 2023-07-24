@@ -164,9 +164,9 @@ fn main() {
             assert!(mesh.positions.len() % 3 == 0);
             let mut vertices: Vec<Vector3<f32>> = Vec::with_capacity(mesh.positions.len() / 3);
             for v in 0..mesh.positions.len() / 3 {
-                let p1 = mesh.positions[3 * v];
+                let p1 = -mesh.positions[3 * v];
                 let p2 = mesh.positions[3 * v + 1];
-                let p3 = mesh.positions[3 * v + 2];
+                let p3 = -mesh.positions[3 * v + 2];
                 let vertex = Vector3::new(p1, p2, p3);
                 vertices.push(vertex);
             }
@@ -199,8 +199,8 @@ fn main() {
     
     // Setup camera
     let mut camera = Camera::new(
-        Vector3::<f32>::new(0.0, 1.0, 3.0),
-        Vector3::new(0.0, 180.0f32.to_radians(), 0.0),
+        Vector3::<f32>::new(0.0, 1.0, -3.0),
+        Vector3::new(0.0, 0.0, 0.0),
         70.0f32.to_radians(),
         imgx as u16,
         imgy as u16);
