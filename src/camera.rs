@@ -14,6 +14,7 @@ pub struct Camera {
 #[allow(dead_code)]
 impl Camera {
     #[inline]
+    /// Rotation is in euler angles (radians).
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>, fov: f32, screen_width: u16, screen_height: u16) -> Self {
         Camera {
             anchor: Anchor::new(position, rotation),

@@ -7,7 +7,7 @@ use material::Material;
 use math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
 mod entity;
-use entity::sphere::Sphere;
+use entity::triangle::Triangle;
 mod camera;
 use camera::Camera;
 use minifb::{Key, Window, WindowOptions};
@@ -112,27 +112,99 @@ fn main() {
             }
         };
     }
+
+    // Create scene
+    let mut scene_data = SceneData::new(vec![]);
     
+    {
+        // Load test model
+        let load_options = tobj::LoadOptions {
+            triangulate: true,
+            single_index: true,
+            ..Default::default()
+        };
+
+        let cornell_box = tobj::load_obj("CornellBox-Original.obj", &load_options);
+        
+        let (models, loaded_materials) = cornell_box.expect("Failed to load OBJ file");
+
+        // Materials might report a separate loading error if the MTL file wasn't found.
+        // If you don't need the materials, you can generate a default here and use that
+        // instead.
+        let loaded_materials = loaded_materials.expect("Failed to load MTL file");
+        let mut materials: Vec<Arc<Material>> = Vec::with_capacity(loaded_materials.len());
+
+        for (_, m) in loaded_materials.iter().enumerate() {
+            // If can't load albedo -> set it to magenta
+            let albedo = m.diffuse.unwrap_or([1.0, 0.0, 1.0]);
+            let material = Arc::new(Material::new(
+                Vector3::new(albedo[0], albedo[1], albedo[2]),
+                Vector3::zeros(), // m.ambient ?
+                0.99, // 1 - m.shininess
+                0.0));
+            materials.push(material);
+        }
+
+        let mut triangle_count = 0;
+        for (_, m) in models.iter().enumerate() {
+            let mesh = &m.mesh;
+
+            assert!(mesh.positions.len() % 3 == 0);
+            let mut vertices: Vec<Vector3<f32>> = Vec::with_capacity(mesh.positions.len() / 3);
+            for v in 0..mesh.positions.len() / 3 {
+                let p1 = mesh.positions[3 * v];
+                let p2 = mesh.positions[3 * v + 1];
+                let p3 = mesh.positions[3 * v + 2];
+                let vertex = Vector3::new(p1, p2, p3);
+                vertices.push(vertex);
+            }
+            let mut index = 0;
+            for _ in 0..mesh.indices.len() / 3 {
+                let vertex1 = vertices[mesh.indices[index] as usize];
+                let vertex2 = vertices[mesh.indices[index + 1] as usize];
+                let vertex3 = vertices[mesh.indices[index + 2] as usize];
+                let triangle = Triangle::new(
+                    vertex1, vertex2, vertex3,
+                    materials[mesh.material_id.unwrap_or(0)].clone()
+                );
+                
+                scene_data.add_object(triangle);
+                index += 3;
+                triangle_count += 1;
+            }
+        }
+        println!("# of models: {}", models.len());
+        println!("# of materials: {}", loaded_materials.len());
+        println!("# of triangles: {}", triangle_count);
+    }
+    
+
     // Load skybox image
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
 
     // Load scene
-    let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
+    //let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
     let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0, 0.99, 0.0));
-    let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
-    let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material);
-    let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
-    let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material);
-    let mut scene_data = SceneData::new(vec![]);
-    let _sphere_p = scene_data.add_object(sphere);
-    let _sphere_p2 = scene_data.add_object(sphere2);
-    let _sphere_p3 = scene_data.add_object(sphere3);
-    let _sphere_p4 = scene_data.add_object(sphere4);
+    // let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
+    // let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material);
+    // let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
+    // let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material);
+    let triangle = Triangle::new(
+        Vector3::new(0.0, 0.0, 0.0),
+        Vector3::new(0.0, 1.0, 0.0),
+        Vector3::new(1.0, 0.0, 0.0),
+        light_material
+    );
+    
+    let _sphere_p = scene_data.add_object(triangle);
+    // let _sphere_p2 = scene_data.add_object(sphere2);
+    // let _sphere_p3 = scene_data.add_object(sphere3);
+    // let _sphere_p4 = scene_data.add_object(sphere4);
     
     // Setup camera
     let mut camera = Camera::new(
-        Vector3::<f32>::new(0.0, 0.5, -3.0),
-        Vector3::zeros(),
+        Vector3::<f32>::new(0.0, 1.0, 3.0),
+        Vector3::new(0.0, 180.0f32.to_radians(), 0.0),
         70.0f32.to_radians(),
         imgx as u16,
         imgy as u16);

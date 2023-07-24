@@ -1,17 +1,17 @@
-use crate::{math::ray::Ray, entity::{sphere::Sphere, hit::Hit, hittable::Hittable}};
+use crate::{math::ray::Ray, entity::{hit::Hit, hittable::Hittable, triangle::Triangle}};
 
 pub struct SceneData {
-    pub objects: Vec<Sphere>,
+    pub objects: Vec<Triangle>,
 }
 
 impl SceneData {
     #[inline]
-    pub fn new(objects: Vec<Sphere>) -> Self {
+    pub fn new(objects: Vec<Triangle>) -> Self {
         SceneData { objects }
     }
 
     #[inline]
-    pub fn add_object(&mut self, object: Sphere) -> &Sphere {
+    pub fn add_object(&mut self, object: Triangle) -> &Triangle {
         self.objects.push(object);
         self.objects.last().unwrap()
     }

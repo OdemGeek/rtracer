@@ -12,6 +12,7 @@ pub struct Anchor {
 #[allow(dead_code)]
 impl Anchor {
     #[inline]
+    /// Rotation is in euler angles (radians).
     pub fn new(position: Vector3<f32>, rotation: Vector3<f32>) -> Self {
         let rotation_matrix = Rotation3::from_euler_angles(rotation.x, rotation.y, rotation.z);
         Anchor { position, rotation,

@@ -36,7 +36,7 @@ impl Render {
             let mut color = Vector3::new(1.0, 1.0, 1.0);
             let mut light = Vector3::zeros();
 
-            const MAX_BOUNCES: u32 = 16;
+            const MAX_BOUNCES: u32 = 8;
             for _ in 0..MAX_BOUNCES {
                 // Calculate intersection
                 let hit = scene.cast_ray(&ray);
