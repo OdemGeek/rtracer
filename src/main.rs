@@ -137,11 +137,23 @@ fn main() {
         for (_, m) in loaded_materials.iter().enumerate() {
             // If can't load albedo -> set it to magenta
             let albedo = m.diffuse.unwrap_or([1.0, 0.0, 1.0]);
+            let zeros: String = String::from("0 0 0");
+            let emission: Vec<f32> = m.unknown_param.get("Ke").unwrap_or(&zeros)
+                .split(' ').take(3)
+                .map(|x| x.parse().unwrap_or(0.0))
+                .collect::<Vec<f32>>();
+            let emission = Vector3::new(
+                *emission.first().unwrap_or(&0.0),
+                *emission.get(1).unwrap_or(&0.0),
+                *emission.get(2).unwrap_or(&0.0)
+            );
+            
             let material = Arc::new(Material::new(
                 Vector3::new(albedo[0], albedo[1], albedo[2]),
-                Vector3::zeros(), // m.ambient ?
-                0.99, // 1 - m.shininess
-                0.0));
+                emission,
+                0.99,
+                0.0
+            ));
             materials.push(material);
         }
 
@@ -184,22 +196,6 @@ fn main() {
 
     // Load scene
     //let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
-    let light_material = Arc::new(Material::new(Vector3::zeros(), Vector3::new(1.0, 1.0, 1.0) * 10.0, 0.99, 0.0));
-    // let sphere = Sphere::new(Vector3::<f32>::new(0.0, -101.0, 4.0), 100.0, white_material.clone());
-    // let sphere2 = Sphere::new(Vector3::<f32>::new(0.0, 0.0, 4.0), 1.0, light_material);
-    // let sphere3 = Sphere::new(Vector3::<f32>::new(-2.2, 0.0, 4.0), 1.0, white_material.clone());
-    // let sphere4 = Sphere::new(Vector3::<f32>::new(2.6, 0.5, 3.0), 1.5, white_material);
-    let triangle = Triangle::new(
-        Vector3::new(0.0, 0.0, 0.0),
-        Vector3::new(0.0, 1.0, 0.0),
-        Vector3::new(1.0, 0.0, 0.0),
-        light_material
-    );
-    
-    let _sphere_p = scene_data.add_object(triangle);
-    // let _sphere_p2 = scene_data.add_object(sphere2);
-    // let _sphere_p3 = scene_data.add_object(sphere3);
-    // let _sphere_p4 = scene_data.add_object(sphere4);
     
     // Setup camera
     let mut camera = Camera::new(

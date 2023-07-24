@@ -1,4 +1,3 @@
-use crate::entity::hittable::Hittable;
 use crate::math::pcg::{self, random_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
@@ -39,22 +38,20 @@ impl Render {
             const MAX_BOUNCES: u32 = 8;
             for _ in 0..MAX_BOUNCES {
                 // Calculate intersection
-                let hit = scene.cast_ray(&ray);
+                let hit_option = scene.cast_ray(&ray);
                 // Calculate fragment
-                if let Some(hit_value) = hit {
-                    let material = &hit_value.object.material;
-                    let point = ray.origin + ray.direction * hit_value.t;
-                    let normal = hit_value.object.normal(&point);
+                if let Some(hit) = hit_option {
+                    let material = &hit.object.material;
 
-                    ray.origin = point + normal * 0.001;
-                    let reflection = reflect(&ray.direction, &normal);
-                    let diffuse = (normal + random_direction(&mut seed)).normalize();
+                    ray.origin = hit.point + hit.normal * 0.001;
+                    let reflection = reflect(&ray.direction, &hit.normal);
+                    let diffuse = (hit.normal + random_direction(&mut seed)).normalize();
                     ray.direction = lerp_vector3(&reflection, &diffuse, material.roughness).normalize();
                     
                     light += material.emission.component_mul(&color);
-                    color = color.component_mul(&material.albedo) * 0.25;
+                    color = color.component_mul(&material.albedo);
                 } else {
-                    light += Vector3::new(0.2, 0.2, 0.2).component_mul(&color);
+                    light += Vector3::new(0.0, 0.0, 0.0).component_mul(&color);
                     break;
                 }
             }
