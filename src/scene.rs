@@ -1,13 +1,14 @@
-use crate::{math::ray::Ray, entity::{hit::Hit, hittable::Hittable, triangle::Triangle}};
+use crate::{math::ray::Ray, entity::{hit::Hit, hittable::Hittable, triangle::Triangle, bvh::Bvh}};
 
-pub struct SceneData {
+pub struct SceneData<'a> {
     pub objects: Vec<Triangle>,
+    bvh: Bvh<'a>,
 }
 
-impl SceneData {
+impl<'a> SceneData<'a> {
     #[inline]
     pub fn new(objects: Vec<Triangle>) -> Self {
-        SceneData { objects }
+        SceneData { objects, bvh: Bvh::new(vec![]) }
     }
 
     #[inline]
@@ -17,8 +18,17 @@ impl SceneData {
     }
 
     #[inline]
+    pub fn calculate_bvh(&mut self) {
+        self.bvh.set_objects((0u32..self.objects.len() as u32).collect());
+        self.bvh.calculate_bounds(&self.objects);
+    }
+
+    #[inline]
     pub fn cast_ray(&self, ray: &Ray) -> Option<Hit> {
         // Get closest hit
+        if !self.bvh.intersect(ray) {
+            return None;
+        }
         self.objects.iter()
         .filter_map(|obj| {  // Take valid hits
             obj.intersect(ray)

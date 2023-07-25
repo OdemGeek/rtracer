@@ -50,10 +50,10 @@ fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
     println!("Logic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
 }
 
-struct RenderData {
+struct RenderData<'a> {
     render: Render,
     max_samples: u32,
-    scene_data: SceneData,
+    scene_data: SceneData<'a>,
     camera: Camera,
     accumulated_time: Duration,
     accumulation_time: Instant,
@@ -61,7 +61,7 @@ struct RenderData {
     render_frames_counted: u32,
 }
 
-impl RenderData {
+impl RenderData<'_> {
     #[inline]
     pub fn draw(&mut self) {
         self.render.draw(&self.scene_data, &self.camera);
@@ -192,12 +192,11 @@ fn main() {
         println!("# of triangles: {}", triangle_count);
     }
     
-
+    // Calculate bvh for loaded scene
+    scene_data.calculate_bvh();
+    
     // Load skybox image
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
-
-    // Load scene
-    //let white_material = Arc::new(Material::new(Vector3::new(0.9, 0.9, 0.9), Vector3::zeros(), 0.99, 0.0));
     
     // Setup camera
     let mut camera = Camera::new(

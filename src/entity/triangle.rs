@@ -24,6 +24,18 @@ impl Triangle {
         x
     }
 
+    pub fn vertex1(&self) -> Vector3<f32> {
+        self.vertex1
+    }
+
+    pub fn vertex2(&self) -> Vector3<f32> {
+        self.vertex2
+    }
+
+    pub fn vertex3(&self) -> Vector3<f32> {
+        self.vertex3
+    }
+
     // Code provided by ChatGPT
     #[inline]
     pub fn plane_normal(&self) -> Vector3<f32> {

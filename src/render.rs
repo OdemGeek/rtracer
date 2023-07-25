@@ -1,7 +1,6 @@
 use crate::math::pcg::{self, random_direction};
 use crate::scene::SceneData;
 use crate::camera::Camera;
-//use crate::shaders::{Shader, TestShader, SkyShader};
 use crate::math::extensions::*;
 use nalgebra::{Vector2, Vector3};
 use rayon::prelude::*;
