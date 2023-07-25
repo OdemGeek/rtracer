@@ -14,6 +14,7 @@ pub struct Triangle {
 
 #[allow(dead_code)]
 impl Triangle {
+    #[inline]
     pub fn new(vertex1: Vector3<f32>, vertex2: Vector3<f32>, vertex3: Vector3<f32>, material: Arc<Material>) -> Self {
         let mut x = Triangle {
             vertex1, vertex2, vertex3, material,
@@ -24,6 +25,7 @@ impl Triangle {
     }
 
     // Code provided by ChatGPT
+    #[inline]
     pub fn plane_normal(&self) -> Vector3<f32> {
         // Calculate the normal vector of the triangle (cross product of two sides)
         let v1 = Vector3::new(
@@ -44,6 +46,7 @@ impl Triangle {
         ).normalize()
     }
 
+    #[inline(always)]
     pub fn normal_flipped(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         let direction = self.normal.dot(ray_direction);
         let is_flipped = if direction > 0.0 {-1.0} else {1.0};
@@ -53,52 +56,60 @@ impl Triangle {
 
 #[allow(dead_code)]
 impl Hittable for Triangle {
-    // Code provided by ChatGPT
-    fn intersect(&self, ray: &Ray) -> Option<super::hit::Hit> {
-        // Calculate the normal vector of the triangle
-        // Change to `normal()` after smooth normals implementation
-        let triangle_normal = self.normal_flipped(&ray.direction);
-    
-        // Check if the ray is parallel to the triangle (dot product of ray direction and normal)
-        let ray_dir_dot_normal = ray.direction.dot(&triangle_normal);
-        if ray_dir_dot_normal.abs() < 1e-6 {
-            return None; // Ray is parallel to the triangle, no intersection
-        }
-    
-        // Calculate the distance from the ray's origin to the triangle plane
-        let t = triangle_normal.dot(&(self.vertex1 - ray.origin)) / ray_dir_dot_normal;
-    
-        if t < 0.0 {
-            return None; // Triangle is behind the ray's origin, no intersection
-        }
-    
-        // Calculate the intersection point
-        let intersection_point = ray.origin + t * ray.direction;
-    
-        // Check if the intersection point is inside the triangle using barycentric coordinates
+    // Möller–Trumbore intersection algorithm, but some lines changed
+    #[inline]
+    #[allow(clippy::manual_range_contains)]
+    fn intersect(&self, ray: &Ray) -> Option<Hit> {
+        const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;
-        let edge3 = intersection_point - self.vertex1;
-    
-        let dot11 = edge1.dot(&edge1);
-        let dot12 = edge1.dot(&edge2);
-        let dot22 = edge2.dot(&edge2);
-        let dot13 = edge1.dot(&edge3);
-        let dot23 = edge2.dot(&edge3);
-    
-        let denom = dot11 * dot22 - dot12 * dot12;
-    
-        let u = (dot22 * dot13 - dot12 * dot23) / denom;
-        let v = (dot11 * dot23 - dot12 * dot13) / denom;
-    
-        // Check if the intersection point is inside the triangle
-        if u >= 0.0 && v >= 0.0 && u + v <= 1.0 {
-            Some(Hit::new(t, intersection_point, triangle_normal, self)) // Intersection point is inside the triangle
-        } else {
-            None // Intersection point is outside the triangle
+        let h = ray.direction.cross(&edge2);
+        let a = edge1.dot(&h);
+        
+        // Without this check render is faster
+        // if a > -EPSILON && a < EPSILON {
+        //     return None; // This ray is parallel to this triangle.
+        // }
+            
+
+        let f = 1.0 / a;
+        let s = ray.origin - self.vertex1;
+        let u = f * s.dot(&h);
+
+        if u < 0.0 || u > 1.0 {
+            return None;
         }
+        
+
+        let q = s.cross(&edge1);
+        
+        // At this stage we can compute t to find out where the intersection point is on the line.
+        let t = f * edge2.dot(&q);
+        // Added `t` check early and moved `t` calculation up by myself, in tests it's faster
+        if t <= EPSILON {
+            return None;
+        }
+
+        let v = f * ray.direction.dot(&q);
+
+        if v < 0.0 || u + v > 1.0 {
+            return None;
+        }
+        
+
+        // Somehow code is becoming faster when removing second `t` check
+        if t > EPSILON // ray intersection
+        {
+            let out_intersection_point = ray.origin + ray.direction * t;
+            Some(Hit::new(t, out_intersection_point, self.normal_flipped(&ray.direction), self))
+        }
+        else { // This means that there is a line intersection but not a ray intersection.
+            None
+        }
+        
     }
 
+    #[inline(always)]
     fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         self.normal_flipped(ray_direction)
     }

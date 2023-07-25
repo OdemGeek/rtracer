@@ -23,6 +23,7 @@ impl Anchor {
         }
     }
 
+    #[inline]
     fn init(&mut self) {
         self.forward = self.rotation_matrix * Vector3::z_axis();
         self.right = self.rotation_matrix * Vector3::x_axis();

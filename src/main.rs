@@ -31,6 +31,7 @@ fn get_current_path() -> Result<String, String> {
 }
 
 #[allow(dead_code)]
+#[inline]
 fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
@@ -61,6 +62,7 @@ struct RenderData {
 }
 
 impl RenderData {
+    #[inline]
     pub fn draw(&mut self) {
         self.render.draw(&self.scene_data, &self.camera);
     }

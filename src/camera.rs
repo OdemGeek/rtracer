@@ -25,6 +25,7 @@ impl Camera {
         }
     }
 
+    #[inline]
     pub fn init(&mut self) {
         self.image_distance = (self.screen_height as f32 / 2.0) / f32::tan(f32::to_radians(self.fov) / 2.0);
     }

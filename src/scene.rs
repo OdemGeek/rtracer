@@ -16,6 +16,7 @@ impl SceneData {
         self.objects.last().unwrap()
     }
 
+    #[inline]
     pub fn cast_ray(&self, ray: &Ray) -> Option<Hit> {
         // Get closest hit
         self.objects.iter()
