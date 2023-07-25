@@ -64,7 +64,4 @@ pub fn reflect(incident: &Vector3<f32>, normal: &Vector3<f32>) -> Vector3<f32> {
 #[inline(always)]
 pub fn lerp_vector3(a: &Vector3<f32>, b: &Vector3<f32>, t: f32) -> Vector3<f32> {
     a * (1.0 - t) + b * t
-    //*pixel * (1.0 - weight) + light * weight
-    // a + t * (b - a); // fast method
-    // (1 - t) * a + t * b; // precise method
 }

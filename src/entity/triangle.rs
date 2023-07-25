@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use nalgebra::Vector3;
-use crate::{math::ray::Ray, material::Material};
-use super::{hittable::Hittable, hit::Hit};
+use crate::{math::ray::Ray, material::Material, entity::hit::Intersection};
+use super::hittable::Hittable;
 
 // Maybe change it to pointer to vertex slice of vertexes
 pub struct Triangle {
@@ -59,7 +59,7 @@ impl Hittable for Triangle {
     // Möller–Trumbore intersection algorithm, but some lines changed
     #[inline]
     #[allow(clippy::manual_range_contains)]
-    fn intersect(&self, ray: &Ray) -> Option<Hit> {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
         const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;
@@ -69,20 +69,16 @@ impl Hittable for Triangle {
         // Without this check render is faster
         // if a > -EPSILON && a < EPSILON {
         //     return None; // This ray is parallel to this triangle.
-        // }
-            
+        // } 
 
         let f = 1.0 / a;
         let s = ray.origin - self.vertex1;
         let u = f * s.dot(&h);
-
         if u < 0.0 || u > 1.0 {
             return None;
         }
-        
 
         let q = s.cross(&edge1);
-        
         // At this stage we can compute t to find out where the intersection point is on the line.
         let t = f * edge2.dot(&q);
         // Added `t` check early and moved `t` calculation up by myself, in tests it's faster
@@ -91,17 +87,14 @@ impl Hittable for Triangle {
         }
 
         let v = f * ray.direction.dot(&q);
-
         if v < 0.0 || u + v > 1.0 {
             return None;
         }
-        
 
         // Somehow code is becoming faster when removing second `t` check
         if t > EPSILON // ray intersection
         {
-            let out_intersection_point = ray.origin + ray.direction * t;
-            Some(Hit::new(t, out_intersection_point, self.normal_flipped(&ray.direction), self))
+            Some(Intersection::new(t, self))
         }
         else { // This means that there is a line intersection but not a ray intersection.
             None

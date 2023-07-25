@@ -24,5 +24,11 @@ impl SceneData {
             obj.intersect(ray)
         }) // Get min hit by param `t`
         .min_by(|hit1, hit2| hit1.t.partial_cmp(&hit2.t).unwrap())
+        .map(|hit| Hit::new(
+            hit.t,
+            ray.origin + ray.direction * hit.t,
+            hit.object.normal_flipped(&ray.direction),
+            hit.object
+        ))
     }
 }
