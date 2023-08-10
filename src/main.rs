@@ -50,10 +50,10 @@ fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
     println!("Logic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
 }
 
-struct RenderData<'a> {
+struct RenderData {
     render: Render,
     max_samples: u32,
-    scene_data: SceneData<'a>,
+    scene_data: SceneData,
     camera: Camera,
     accumulated_time: Duration,
     accumulation_time: Instant,
@@ -61,7 +61,7 @@ struct RenderData<'a> {
     render_frames_counted: u32,
 }
 
-impl RenderData<'_> {
+impl RenderData {
     #[inline]
     pub fn draw(&mut self) {
         self.render.draw(&self.scene_data, &self.camera);
@@ -78,6 +78,26 @@ fn main() {
     
     // Get command line arguments
     let args: Vec<String> = env::args().collect();
+    
+    // Print help text
+    if args.len() == 2 && args[1].to_lowercase() == "help" {
+        println!("
+    █▀▀█ ▀▀█▀▀ █▀▀█ █▀▀█ █▀▀ █▀▀ █▀▀█ 
+    █▄▄▀   █   █▄▄▀ █▄▄█ █   █▀▀ █▄▄▀ 
+    █  █   █   ▀ ▀▀ ▀  ▀ ▀▀▀ ▀▀▀ ▀ ▀▀
+                                by OdemGeek
+
+Argument syntax:
+    [help]
+    [-SampleCount]
+    [-ImageWidth] [-ImageHeight]
+    [-ImageWidth] [-ImageHeight] [-SampleCount]
+
+    If no arguments passed SampleCount is set to 0, ImageWidth and ImageHeight is 800
+    If SampleCount is 0, render is infinite.
+         ");
+        return;
+    }
 
     // Check if the required number of arguments is provided
     if args.len() == 2 {
@@ -117,7 +137,7 @@ fn main() {
 
     // Create scene
     let mut scene_data = SceneData::new(vec![]);
-    
+
     {
         // Load test model
         let load_options = tobj::LoadOptions {
@@ -129,7 +149,7 @@ fn main() {
         let cornell_box = tobj::load_obj("CornellBox-Original.obj", &load_options);
         
         let (models, loaded_materials) = cornell_box.expect("Failed to load OBJ file");
-
+        
         // Materials might report a separate loading error if the MTL file wasn't found.
         // If you don't need the materials, you can generate a default here and use that
         // instead.
@@ -194,7 +214,6 @@ fn main() {
     
     // Calculate bvh for loaded scene
     scene_data.calculate_bvh();
-    
     // Load skybox image
     //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
     
@@ -255,6 +274,7 @@ fn main() {
     let thread_pause = Arc::clone(&pause);
     let thread_stop = Arc::clone(&stop);
 
+    println!();
     print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
 
     let render_thread = thread::spawn(move || {

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use nalgebra::Vector3;
-use crate::{math::ray::Ray, material::Material, entity::hit::Intersection};
+use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
 use super::hittable::Hittable;
 
 // Maybe change it to pointer to vertex slice of vertexes
@@ -24,16 +24,31 @@ impl Triangle {
         x
     }
 
+    #[inline(always)]
     pub fn vertex1(&self) -> Vector3<f32> {
         self.vertex1
     }
 
+    #[inline(always)]
     pub fn vertex2(&self) -> Vector3<f32> {
         self.vertex2
     }
 
+    #[inline(always)]
     pub fn vertex3(&self) -> Vector3<f32> {
         self.vertex3
+    }
+
+    #[inline]
+    pub fn random_point(&self, seed: &mut u32) -> Vector3<f32> {
+        // Shape Distributions
+        // ROBERT OSADA, THOMAS FUNKHOUSER, BERNARD CHAZELLE, and DAVID DOBKIN
+        // Princeton University
+        // P = (1 - sqrt(r1))*A + sqrt(r1)*(1 - r2)*B + sqrt(r1)*r2*C
+        // Where A, B, C is vertices and r1, r2 is uniform random values in range 0-1
+        let r1sqrt = pcg::random_f32(seed).sqrt();
+        let r2 = pcg::random_f32(seed);
+        (1.0 - r1sqrt) * self.vertex1 + r1sqrt * (1.0 - r2) * self.vertex2 + r1sqrt * r2 * self.vertex3
     }
 
     // Code provided by ChatGPT
@@ -67,11 +82,11 @@ impl Triangle {
 }
 
 #[allow(dead_code)]
-impl Hittable for Triangle {
+impl Hittable<Self> for Triangle {
     // Möller–Trumbore intersection algorithm, but some lines changed
     #[inline]
     #[allow(clippy::manual_range_contains)]
-    fn intersect(&self, ray: &Ray) -> Option<Intersection> {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection<Self>> {
         const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;

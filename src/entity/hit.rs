@@ -15,14 +15,14 @@ impl<'a> Hit<'a> {
     }
 }
 
-pub struct Intersection<'a> {
+pub struct Intersection<'a, T> {
     pub t: f32,
-    pub object: &'a Triangle,
+    pub object: &'a T,
 }
 
-impl<'a> Intersection<'a> {
+impl<'a, T> Intersection<'a, T> {
     #[inline]
-    pub fn new(t: f32, object: &'a Triangle) -> Self {
+    pub fn new(t: f32, object: &'a T) -> Self {
         Intersection { t, object }
     }
 }

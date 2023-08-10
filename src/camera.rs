@@ -31,7 +31,7 @@ impl Camera {
     }
 
     #[inline]
-    pub fn ray_from_screen_point(&self, screen_pos: Vector2<f32>, seed: &mut u32) -> Ray {
+    pub fn ray_from_screen_point(&self, screen_pos: &Vector2<f32>, seed: &mut u32) -> Ray {
         let view_plane_half_height = f32::tan(self.fov / 2.0);
         let aspect_ratio = self.screen_width as f32 / self.screen_height as f32;
         let view_plane_half_width = aspect_ratio * view_plane_half_height;

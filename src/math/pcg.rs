@@ -16,6 +16,14 @@ pub fn random_f32(seed: &mut u32) -> f32 {
     *seed as f32 / u32::MAX as f32
 }
 
+/// Returns random u32
+#[allow(dead_code)]
+#[inline]
+pub fn random_u32(seed: &mut u32) -> u32 {
+    *seed = hash(*seed);
+    *seed
+}
+
 /// Returns random vector in range 0-1
 #[allow(dead_code)]
 #[inline]
