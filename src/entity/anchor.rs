@@ -52,7 +52,7 @@ impl Anchor {
 
     #[inline]
     pub fn set_position(&mut self, position: Vector3<f32>) {
-        self.rotation = position;
+        self.position = position;
     }
 
     #[inline]

@@ -46,18 +46,21 @@ impl Render {
                     ray.origin = hit.point + hit.normal * 0.001;
                     let reflection: Vector3<f32> = reflect(&ray.direction, &hit.normal);
                     let diffuse: Vector3<f32> = (hit.normal + random_direction(&mut seed)).normalize();
-
-                    let random_index = pcg::random_u32(&mut seed) % scene.light_objects.len() as u32;
-                    let random_light_object = &scene.objects[scene.light_objects[random_index as usize] as usize];
-                    let light_object_midpoint: Vector3<f32> = random_light_object.random_point(&mut seed);
-                    let random_ray = Ray::new(ray.origin, (light_object_midpoint - ray.origin).normalize());
-                    let additional_ray = scene.cast_ray(&random_ray);
-
-                    let additional_emission = if let Some(ar) = additional_ray {
-                        ar.object.material.emission *
-                        random_ray.direction.dot(&hit.normal).max(0.0) *
-                        random_ray.direction.dot(&-ar.normal).max(0.0) *
-                        (1.0 / ar.t.powi(2))
+                    
+                    let additional_emission = if !scene.light_objects.is_empty() {
+                        let random_index = pcg::random_u32(&mut seed) % scene.light_objects.len() as u32;
+                        let random_light_object = &scene.objects[scene.light_objects[random_index as usize] as usize];
+                        let light_object_midpoint: Vector3<f32> = random_light_object.random_point(&mut seed);
+                        let random_ray = Ray::new(ray.origin, (light_object_midpoint - ray.origin).normalize());
+                        let additional_ray = scene.cast_ray(&random_ray);
+                        if let Some(ar) = additional_ray {
+                            ar.object.material.emission *
+                            random_ray.direction.dot(&hit.normal).max(0.0) *
+                            random_ray.direction.dot(&-ar.normal).max(0.0) *
+                            (1.0 / ar.t.powi(2))
+                        } else {
+                            Vector3::zeros()
+                        }
                     } else {
                         Vector3::zeros()
                     };
@@ -73,7 +76,7 @@ impl Render {
                     light += additional_emission.component_mul(&color) * 0.0625;
 
                 } else {
-                    light += Vector3::new(0.0, 0.0, 0.0).component_mul(&color);
+                    light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
                     break;
                 }
             }

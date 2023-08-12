@@ -11,8 +11,8 @@ pub fn load_scene(path: &str) -> (Vec<Triangle>, Camera) {
     let reader = BufReader::new(file);
     let mut models: Vec<String> = vec![];
     let mut camera = Camera::new(
-        Vector3::new(0.0, 1.0, 3.0),
-        Vector3::new(0.0, 180.0f32.to_radians(), 0.0),
+        Vector3::new(0.0, 1.0, -3.0),
+        Vector3::new(0.0, 0.0, 0.0),
         70.0f32.to_radians(),
         800,
         800
