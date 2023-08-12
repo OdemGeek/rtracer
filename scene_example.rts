@@ -1,0 +1,14 @@
+# Special file format for scene description in RTracer
+
+Model[
+test.obj
+]Model
+
+Camera[
+# Position
+p 0 1 3
+# Rotation in degrees
+r 0 180 0
+# Fov
+f 70
+]Camera

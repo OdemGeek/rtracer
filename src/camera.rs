@@ -5,6 +5,7 @@ use crate::math::pcg::random_f32;
 
 pub struct Camera {
     pub anchor: Anchor,
+    /// Vertical view angle in radians
     pub fov: f32,
     pub screen_width: u16,
     pub screen_height: u16,
@@ -48,6 +49,6 @@ impl Camera {
             + (screen_pos.x + random_x_offset) * x_inc_vector
             + (screen_pos.y + random_y_offset) * y_inc_vector;
         let cast_ray = view_plane_point;
-        Ray::new(self.anchor.position, cast_ray)
+        Ray::new(self.anchor.position(), cast_ray)
     }
 }

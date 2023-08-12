@@ -1,8 +1,8 @@
 use nalgebra::{Vector3, Rotation3, UnitVector3};
 
 pub struct Anchor {
-    pub position: Vector3<f32>,
-    pub rotation: Vector3<f32>,
+    position: Vector3<f32>,
+    rotation: Vector3<f32>,
     rotation_matrix: Rotation3<f32>,
     forward: UnitVector3<f32>,
     right: UnitVector3<f32>,
@@ -43,6 +43,21 @@ impl Anchor {
     #[inline]
     pub fn up(&self) -> UnitVector3<f32> {
         self.up
+    }
+
+    #[inline]
+    pub fn position(&self) -> Vector3<f32> {
+        self.position
+    }
+
+    #[inline]
+    pub fn set_position(&mut self, position: Vector3<f32>) {
+        self.rotation = position;
+    }
+
+    #[inline]
+    pub fn rotation(&self) -> Vector3<f32> {
+        self.rotation
     }
 
     #[inline]

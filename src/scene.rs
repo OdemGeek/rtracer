@@ -13,7 +13,13 @@ pub struct SceneData {
 impl SceneData {
     #[inline]
     pub fn new(objects: Vec<Triangle>) -> Self {
-        SceneData { objects, light_objects: vec![], objects_bounds: vec![], bvhs: vec![] }
+        let mut data = SceneData { objects, light_objects: vec![], objects_bounds: vec![], bvhs: vec![] };
+        data.objects.iter().enumerate().for_each(|(i, x)| {
+            if x.material.emission != Vector3::zeros() {
+                data.light_objects.push(i as u32);
+            }
+        });
+        data
     }
 
     #[inline]
