@@ -24,8 +24,42 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
         mesh.polygons.iter().for_each(|pol| {
             for i in pol.start..pol.end {
                 match &model.polygons[i] {
-                    raw::object::Polygon::P(_) => panic!("Position is not yet implemented"),
-                    raw::object::Polygon::PT(_) => panic!("Position + Texture Coordinate is not yet implemented"),
+                    raw::object::Polygon::P(p) => {
+                        if p.len() == 3 {
+                            let v1 = model.positions[p[0]];
+                            let v2 = model.positions[p[1]];
+                            let v3 = model.positions[p[2]];
+
+                            // For some reason Z coordinate is negative, so just reverse it
+                            let triangle = Triangle::new(
+                                Vector3::new(v1.0, v1.1, -v1.2),
+                                Vector3::new(v2.0, v2.1, -v2.2),
+                                Vector3::new(v3.0, v3.1, -v3.2),
+                                materials[mesh_name].clone()
+                            );
+                            triangles.push(triangle);
+                        } else {
+                            panic!("Mesh must be triangulated, native triangulation is not yet implemented");
+                        }
+                    },
+                    raw::object::Polygon::PT(p) => {
+                        if p.len() == 3 {
+                            let v1 = model.positions[p[0].0];
+                            let v2 = model.positions[p[1].0];
+                            let v3 = model.positions[p[2].0];
+
+                            // For some reason Z coordinate is negative, so just reverse it
+                            let triangle = Triangle::new(
+                                Vector3::new(v1.0, v1.1, -v1.2),
+                                Vector3::new(v2.0, v2.1, -v2.2),
+                                Vector3::new(v3.0, v3.1, -v3.2),
+                                materials[mesh_name].clone()
+                            );
+                            triangles.push(triangle);
+                        } else {
+                            panic!("Mesh must be triangulated, native triangulation is not yet implemented");
+                        }
+                    },
                     raw::object::Polygon::PN(p) => {
                         if p.len() == 3 {
                             let v1 = model.positions[p[0].0];
