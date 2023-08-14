@@ -6,9 +6,9 @@ test.obj
 
 Camera[
 # Position
-p 0 1 3
+p 0 1 -3
 # Rotation in degrees
-r 0 180 0
+r 0 0 0
 # Fov
 f 70
 ]Camera
