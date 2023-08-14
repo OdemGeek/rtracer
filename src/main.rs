@@ -287,6 +287,26 @@ Argument syntax:
                 need_to_reset |= true;
             }
     
+            if window.is_key_pressed(Key::I, minifb::KeyRepeat::No) {
+                data.render.bvh_debug = !data.render.bvh_debug;
+                data.max_samples = if data.render.bvh_debug {
+                    16
+                } else {
+                    max_samples
+                };
+                need_to_reset |= true;
+            }
+            if data.render.bvh_debug {
+                if window.is_key_pressed(Key::Period, minifb::KeyRepeat::No) {
+                    data.render.debug_depth += 1;
+                    need_to_reset |= true;
+                }
+                if window.is_key_pressed(Key::Comma, minifb::KeyRepeat::No) && data.render.debug_depth > 0 {
+                    data.render.debug_depth -= 1;
+                    need_to_reset |= true;
+                }
+            }
+
             if window.get_mouse_down(minifb::MouseButton::Right) && mouse_delta != Vector2::zeros() {
                 let rotation = data.camera.anchor.rotation();
                 data.camera.anchor.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);

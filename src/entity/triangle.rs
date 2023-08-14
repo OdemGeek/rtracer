@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use nalgebra::Vector3;
 use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
-use super::hittable::Hittable;
+use super::hit::Hittable;
 
 // Maybe change it to pointer to vertex slice of vertexes
 pub struct Triangle {

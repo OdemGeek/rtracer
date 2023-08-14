@@ -1,4 +1,6 @@
-use crate::math::pcg::{self, random_direction, random_f32};
+use crate::entity::bvh::Bvh;
+use crate::entity::hit::{self, Intersection};
+use crate::math::pcg::{self, random_direction, random_vector3};
 use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
@@ -8,6 +10,8 @@ use rayon::prelude::*;
 
 pub struct Render {
     pub texture_buffer: Vec<Vector3<f32>>,
+    pub debug_depth: u32,
+    pub bvh_debug: bool,
     accumulated_frames: u32,
     seed: u32,
 }
@@ -15,7 +19,7 @@ pub struct Render {
 impl Render {
     #[inline]
     pub fn new(width: u32, height: u32) -> Self {
-        Render { texture_buffer: vec![Vector3::zeros(); (width * height) as usize], accumulated_frames: 0, seed: 153544 }
+        Render { texture_buffer: vec![Vector3::zeros(); (width * height) as usize], accumulated_frames: 0, seed: 153544, debug_depth: 0, bvh_debug: false }
     }
 
     pub fn draw(&mut self, scene: &SceneData, camera: &Camera) {
@@ -35,6 +39,24 @@ impl Render {
             let mut color: Vector3<f32> = Vector3::new(1.0, 1.0, 1.0);
             let mut light: Vector3<f32> = Vector3::zeros();
 
+            if self.bvh_debug {
+                let bvhs: Vec<&Bvh> = scene.get_bvh_by_depth(self.debug_depth);
+                color = Vector3::new(0.005, 0.005, 0.005);
+                let mut hits: Vec<Intersection<Bvh>> = bvhs.iter().filter_map(|x| x.intersect_point(&ray)).flatten().collect();
+                hits.sort_by(|x, y| y.t.partial_cmp(&x.t).unwrap());
+                
+                for hit in hits {
+                    let mut bvh_color: Vector3<f32> = random_vector3(&mut (hit.object.first_object + hit.object.object_count));
+                    let hit_point = ray.origin + ray.direction * hit.t;
+                    let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 25.0).clamp(0.0, 1.0);
+                    bvh_color = lerp_vector3(&Vector3::new(0.9, 0.9, 0.9), &bvh_color, distance_to_edge.clamp(0.0, 1.0));
+                    color = lerp_vector3(&color, &bvh_color, 0.3);
+                }
+
+                let blended_color = lerp_vector3(pixel, &color, weight);
+                *pixel = blended_color;
+                return;
+            }
             const MAX_BOUNCES: u32 = 8;
             for bounce_index in 0..MAX_BOUNCES {
                 // Calculate intersection

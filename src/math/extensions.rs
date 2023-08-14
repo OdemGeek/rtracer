@@ -40,8 +40,7 @@ pub fn u8_from_u32(c: u32) -> (u8, u8, u8) {
 #[allow(dead_code)]
 #[inline(always)]
 pub fn u32_from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
-    let (r, g, b) = (r as u32, g as u32, b as u32);
-    (r << 16) | (g << 8) | b
+    ((r as u32) << 16) | ((g as u32) << 8) | (b as u32)
 }
 
 /// Returns value in 0-1 range
