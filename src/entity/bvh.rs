@@ -76,6 +76,10 @@ impl Bvh {
             return Some(vec![Intersection::<'a, Bvh>::new(tmax, self)]);
         }
 
+        if tmin < 0.0 {
+            return Some(vec![Intersection::<'a, Bvh>::new(tmax, self)]);
+        }
+
         // t = tmin;
         Some(vec![Intersection::<'a, Bvh>::new(tmin, self), Intersection::<'a, Bvh>::new(tmax, self)])
     }
