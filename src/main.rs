@@ -37,27 +37,31 @@ fn time_since_startup(start_time: Instant) -> f32 {
 }
 
 fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
+        main_thread_wait_elapsed: Duration, render_thread_wait_elapsed: Duration,
         logic_elapsed: Duration, render_elapsed: Duration,
         window_draw_elapsed: Duration, sample_count: u32,
         clear_console: bool) {
     // Remove previous lines
     if clear_console {
-        print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+        print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
     }
     // Print new lines
     println!("Render time: {accumulation_time:.2?}\nSample count: {sample_count:?}");
     println!("Current frame timings:\nTotal: {total_frame_elapsed:.2?}");
-    println!("Logic: {logic_elapsed:.2?}\nRender: {render_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\n");
+    println!("Render: {render_elapsed:.2?}\nWait for main thread: {render_thread_wait_elapsed:.2?}");
+    println!("Wait for render thread: {main_thread_wait_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\n");
 }
 
 struct RenderData {
     render: Render,
+    updated: bool,
     max_samples: u32,
     scene_data: SceneData,
     camera: Camera,
     accumulated_time: Duration,
     accumulation_time: Instant,
     render_elapsed: Duration,
+    render_wait_elapsed: Duration,
     render_frames_counted: u32,
 }
 
@@ -170,12 +174,16 @@ Argument syntax:
     let accumulation_time = Instant::now();
     let accumulated_time = Duration::ZERO;
     let render_elapsed = Duration::ZERO;
+    let render_wait_elapsed = Duration::ZERO;
 
     let mut frames_counted = 0;
     let mut counter_time = Instant::now();
     let mut frame_start = Instant::now();
+    let mut logic_start;
+    let mut thread_wait;
     let mut total_frame_elapsed = Duration::ZERO;
     let mut logic_elapsed = Duration::ZERO;
+    let mut main_thread_wait_elapsed = Duration::ZERO;
     let mut window_draw_elapsed = Duration::ZERO;
     let mut mouse_position = window.get_mouse_pos(minifb::MouseMode::Pass).unwrap_or((0.0, 0.0));
     let mut mouse_delta;
@@ -184,10 +192,11 @@ Argument syntax:
     // Create a mutex to protect the shared data
     let mut output_buffer = render.texture_buffer.clone();
     let render_data = Arc::new(Mutex::new(
-        RenderData { render, max_samples,
+        RenderData {
+            render, updated: true, max_samples,
             scene_data, camera, accumulated_time,
             accumulation_time, render_elapsed,
-            render_frames_counted: 0,
+            render_wait_elapsed, render_frames_counted: 0,
     }));
     let pause = Arc::new(AtomicBool::new(false));
     let stop = Arc::new(AtomicBool::new(false));
@@ -202,14 +211,14 @@ Argument syntax:
     let thread_stop = Arc::clone(&stop);
 
     println!();
-    print_times(accumulation_time.elapsed(), total_frame_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, main_thread_wait_elapsed, render_wait_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
 
     let render_thread = thread::spawn(move || {
         // Access the shared data via the mutex
         let mut data = thread_render_data.lock().unwrap();
         
         loop {
-            let render_start = Instant::now();
+            let wait_start = Instant::now();
             // Check if the thread is paused
             while thread_pause.load(Ordering::Relaxed) {
                 data = thread_condvar.wait(data).unwrap();
@@ -218,18 +227,29 @@ Argument syntax:
             if thread_stop.load(Ordering::Relaxed) {
                 break;
             }
+            data.render_wait_elapsed += wait_start.elapsed();
+
+            let render_start = Instant::now();
             // Perform your thread's logic here, using the shared data
             // Render image
             if data.render.get_accumulated_frames_count() < data.max_samples || data.max_samples == 0 {
                 data.draw();
                 data.accumulated_time = data.accumulation_time.elapsed();
+                data.updated = true;
             }
             data.render_elapsed += render_start.elapsed();
             data.render_frames_counted += 1;
         }
     });
     
-    let mut image_u32_buffer: Vec<u32>;
+    let mut image_updated;
+    let mut image_u32_buffer: Vec<u32> = output_buffer.iter().map(|p| {
+        u32_from_u8_rgb(
+            (p.x * 255.0) as u8,
+            (p.y * 255.0) as u8,
+            (p.z * 255.0) as u8
+        )
+    }).collect();
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -238,23 +258,31 @@ Argument syntax:
         frame_start = Instant::now();
         
         {
+            thread_wait = Instant::now();
             pause.store(true, Ordering::Relaxed);
             let mut data = render_data.lock().unwrap();
+            main_thread_wait_elapsed += thread_wait.elapsed();
             
+            logic_start = Instant::now();
+            image_updated = data.updated;
             // Debug frame timings
-            if counter_time.elapsed().as_secs_f32() > 1.0 {
+            if counter_time.elapsed().as_secs_f32() > 1.0 && frames_counted > 0 {
                 total_frame_elapsed /= frames_counted;
+                main_thread_wait_elapsed /= frames_counted;
                 logic_elapsed /= frames_counted;
                 let render_frames_counted = data.render_frames_counted;
                 if render_frames_counted > 0 {
                     data.render_elapsed /= render_frames_counted;
+                    data.render_wait_elapsed /= render_frames_counted;
                 }
                 window_draw_elapsed /= frames_counted;
                 counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
                 frames_counted = 0;
                 data.render_frames_counted = 0;
-                print_times(data.accumulated_time, total_frame_elapsed, logic_elapsed, data.render_elapsed, window_draw_elapsed, data.render.get_accumulated_frames_count(), true);
+                print_times(data.accumulated_time, total_frame_elapsed, main_thread_wait_elapsed, data.render_wait_elapsed, logic_elapsed, data.render_elapsed, window_draw_elapsed, data.render.get_accumulated_frames_count(), true);
                 total_frame_elapsed = Duration::ZERO;
+                data.render_wait_elapsed = Duration::ZERO;
+                main_thread_wait_elapsed = Duration::ZERO;
                 logic_elapsed = Duration::ZERO;
                 data.render_elapsed = Duration::ZERO;
                 window_draw_elapsed = Duration::ZERO;
@@ -319,21 +347,27 @@ Argument syntax:
                 data.accumulation_time = Instant::now();
             }
 
-            output_buffer.clone_from_slice(&data.render.texture_buffer);
+            if image_updated {
+                output_buffer.clone_from_slice(&data.render.texture_buffer);
+            }
+
+            data.updated = false;
             pause.store(false, Ordering::Relaxed);
             condvar.notify_one();
-            logic_elapsed += frame_start.elapsed();
+            logic_elapsed += logic_start.elapsed();
         }
 
         // Draw the image in the center of the window
         let window_start = Instant::now();
-        image_u32_buffer = output_buffer.iter().map(|p| {
-            u32_from_u8_rgb(
-                (p.x.powf(1.0/2.2) * 255.0) as u8,
-                (p.y.powf(1.0/2.2) * 255.0) as u8,
-                (p.z.powf(1.0/2.2) * 255.0) as u8
-            )
-        }).collect();
+        if image_updated {
+            image_u32_buffer = output_buffer.iter().map(|p| {
+                u32_from_u8_rgb(
+                    (p.x.powf(1.0/2.2) * 255.0) as u8,
+                    (p.y.powf(1.0/2.2) * 255.0) as u8,
+                    (p.z.powf(1.0/2.2) * 255.0) as u8
+                )
+            }).collect();
+        }
         window
             .update_with_buffer(&image_u32_buffer, imgx as usize, imgy as usize)
             .unwrap();

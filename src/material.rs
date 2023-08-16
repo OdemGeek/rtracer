@@ -1,5 +1,6 @@
 use nalgebra::Vector3;
 
+#[derive(Debug)]
 pub struct Material {
     pub albedo: Vector3<f32>,
     pub emission: Vector3<f32>,

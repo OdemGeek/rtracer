@@ -4,6 +4,7 @@ use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection
 use super::hit::Hittable;
 
 // Maybe change it to pointer to vertex slice of vertexes
+#[derive(Debug)]
 pub struct Triangle {
     vertex1: Vector3<f32>,
     vertex2: Vector3<f32>,

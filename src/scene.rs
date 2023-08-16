@@ -31,6 +31,7 @@ impl SceneData {
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn add_object(&mut self, object: Triangle) -> &Triangle {
         self.objects.push(object);
         let triangle = self.objects.last().unwrap();
@@ -82,10 +83,10 @@ impl SceneData {
     #[inline]
     pub fn calculate_childs(&mut self, bvh_index: u32) {
         let bvh = &mut self.bvhs[bvh_index as usize];
-        let (split_pos, divide_axis) = bvh.division_plane();
         if bvh.object_count < 3 {
             return;
         }
+        let (split_pos, divide_axis) = bvh.division_plane();
         // Divide
         let mut i = bvh.first_object;
         let mut j = i + bvh.object_count - 1;
@@ -94,12 +95,13 @@ impl SceneData {
                 i += 1;
             }
             else {
-                j -= 1;
                 self.objects_bounds.swap(i as usize, j as usize);
+                j -= 1;
             }
         }
 
         let left_count = i - bvh.first_object;
+        // That's strange, if we divide in equal halfs it doesn't subdivide further
         if left_count == 0 || left_count == bvh.object_count {
             return;
         }
@@ -108,7 +110,6 @@ impl SceneData {
         self.nodes_used += 1;
         let right_node_index = self.nodes_used;
         self.nodes_used += 1;
-        
         // Borrow checker wants this values to be copied
         // So we don't have 2 mutable references
         let first_object = bvh.first_object;
@@ -231,7 +232,7 @@ impl BvhIntersection<'_> {
     fn intersect_bvh(&mut self, ray: &Ray, bvh_index: u32, ) {
         let bvh = &self.data.bvhs[bvh_index as usize];
         if !bvh.intersect(ray) {
-            // return;
+            return;
         }
         if bvh.is_leaf() {
             self.intersect_triangles(bvh, ray);

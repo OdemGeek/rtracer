@@ -110,15 +110,16 @@ impl Bvh {
         let z_len = (self.aabb_max.z - self.aabb_min.z).abs();
 
         if x_len >= y_len && x_len >= z_len {
-            ((self.aabb_max.x - self.aabb_min.x) / 2.0, 0)
+            ((self.aabb_max.x + self.aabb_min.x) / 2.0, 0)
         } else if y_len >= x_len && y_len >= z_len {
-            ((self.aabb_max.y - self.aabb_min.y) / 2.0, 1)
+            ((self.aabb_max.y + self.aabb_min.y) / 2.0, 1)
         } else {
-            ((self.aabb_max.z - self.aabb_min.z) / 2.0, 2)
+            ((self.aabb_max.z + self.aabb_min.z) / 2.0, 2)
         }
     }
 }
 
+#[derive(Debug)]
 pub struct BoundsTriangle {
     pub centroid: Vector3<f32>,
     pub aabb_min: Vector3<f32>,
@@ -190,8 +191,9 @@ mod tests {
         bvh.aabb_min = Vector3::new(-1.0, -1.0, -2.0);
         bvh.aabb_max = Vector3::new(1.0, 1.0, 2.0);
 
-        let result = bvh.division_plane().1;
-        assert_eq!(result, 2);
+        let (split_pos, division_plane) = bvh.division_plane();
+        assert_eq!(division_plane, 2);
+        assert_eq!(split_pos, 0.0);
     }
 
     

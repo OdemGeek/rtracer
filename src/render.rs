@@ -48,7 +48,7 @@ impl Render {
                 for hit in hits {
                     let mut bvh_color: Vector3<f32> = random_vector3(&mut (hit.object.first_object + hit.object.object_count));
                     let hit_point = ray.origin + ray.direction * hit.t;
-                    let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 25.0).clamp(0.0, 1.0);
+                    let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 15.0).clamp(0.0, 1.0);
                     bvh_color = lerp_vector3(&Vector3::new(0.9, 0.9, 0.9), &bvh_color, distance_to_edge.clamp(0.0, 1.0));
                     color = lerp_vector3(&color, &bvh_color, 0.3);
                 }
