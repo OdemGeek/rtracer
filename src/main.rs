@@ -104,7 +104,7 @@ Argument syntax:
          ");
         return;
     }
-
+    
     // Check if the required number of arguments is provided
     if args.len() == 2 {
         max_samples = match args[1].parse() {
@@ -156,7 +156,7 @@ Argument syntax:
     camera.screen_width = imgx as u16;
     camera.screen_height = imgy as u16;
     camera.init();
-
+    
     // Create a window with the specified dimensions
     let mut window = Window::new(
         "Rust Window",

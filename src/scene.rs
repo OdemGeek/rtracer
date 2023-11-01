@@ -74,19 +74,29 @@ impl SceneData {
 
         println!("BVH generation time: {} ms", timer.elapsed().as_millis());
         self.bvhs.iter().enumerate().for_each(|x| {
-            //if x.1.object_count > 0 {
-                println!("{} {:?}\n", x.0, x.1);
-            //}
+            println!("{} {:?}\n", x.0, x.1);
         });
+
+        // let mut current_depth = 0;
+        // loop {
+        //     let current_count = self.get_bvh_by_depth(current_depth).len();
+        //     if current_count == 0 {
+        //         break;
+        //     }
+        //     println!("Depth {}. Count: {}", current_depth, current_count);
+        //     current_depth += 1;
+        // }
     }
 
     #[inline]
     pub fn calculate_childs(&mut self, bvh_index: u32) {
+        let s = self.calculate_bounds_centroids(bvh_index);
         let bvh = &mut self.bvhs[bvh_index as usize];
         if bvh.object_count < 3 {
             return;
         }
-        let (split_pos, divide_axis) = bvh.division_plane();
+        let s = s.unwrap();
+        let (split_pos, divide_axis) = Bvh::division_plane(s.0, s.1);
         // Divide
         let mut i = bvh.first_object;
         let mut j = i + bvh.object_count - 1;
@@ -147,6 +157,26 @@ impl SceneData {
     }
 
     #[inline]
+    pub fn calculate_bounds_centroids(&self, bvh_index: u32) -> Option<(Vector3<f32>, Vector3<f32>)> {
+        let bvh = &self.bvhs[bvh_index as usize];
+        if self.objects_bounds.is_empty() || bvh.object_count == 0 {
+            return None;
+        }
+        let triangles: &[BoundsTriangle] = &self.objects_bounds[(bvh.first_object as usize)..(bvh.first_object + bvh.object_count) as usize];
+        let points: Vec<Vector3<f32>> = triangles.iter().map(|x| x.centroid).collect();
+
+        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        Some((Vector3::new(x_min, y_min, z_min), Vector3::new(x_max, y_max, z_max)))
+    }
+
+    #[inline]
     fn calculate_objects_bounds(objects: &[Triangle]) -> Vec<BoundsTriangle> {
         objects.iter().enumerate().map(
             |x| BoundsTriangle::new(
@@ -196,7 +226,7 @@ impl BvhDepth<'_> {
         self.intersect_bvh(0, 0);
     }
 
-    #[inline(always)]
+    #[inline]
     fn intersect_bvh(&mut self, bvh_index: u32, depth: u32) {
         let bvh = &self.data.bvhs[bvh_index as usize];
 
@@ -206,7 +236,7 @@ impl BvhDepth<'_> {
         if depth == self.depth {
             self.bvhs.push(bvh);
         } else if !bvh.is_leaf() {
-            self.intersect_bvh(bvh.first_object, depth + 1 );
+            self.intersect_bvh(bvh.first_object, depth + 1);
             self.intersect_bvh(bvh.first_object + 1, depth + 1);
         }
     }
@@ -228,37 +258,40 @@ impl BvhIntersection<'_> {
         self.intersect_bvh(ray, 0);
     }
 
-    #[inline(always)]
-    fn intersect_bvh(&mut self, ray: &Ray, bvh_index: u32, ) {
-        let bvh = &self.data.bvhs[bvh_index as usize];
+    #[inline]
+    fn intersect_bvh(&mut self, ray: &Ray, bvh_index: usize) {
+        let bvh = &self.data.bvhs[bvh_index];
         if !bvh.intersect(ray) {
+            // Comment this line to get it work for now
+            // (BVH is doesn't work)
             return;
         }
         if bvh.is_leaf() {
             self.intersect_triangles(bvh, ray);
-        }
-        else {
-            self.intersect_bvh(ray, bvh.first_object);
-            self.intersect_bvh(ray, bvh.first_object + 1);
+        } else {
+            self.intersect_bvh(ray, bvh.first_object as usize);
+            self.intersect_bvh(ray, (bvh.first_object + 1) as usize);
         }
     }
 
     #[inline(always)]
     fn intersect_triangles(&mut self, bvh: &Bvh, ray: &Ray) {
-        let hit = self.data.objects[bvh.first_object as usize..(bvh.first_object + bvh.object_count) as usize].iter()
+        let hit = 
+        self.data.objects[(bvh.first_object as usize)..((bvh.first_object + bvh.object_count) as usize)]
+        .iter()
         .filter_map(|obj| {  // Take valid hits
             obj.intersect(ray)
-        }) // Get min hit by param `t`
-        .min_by(|hit1, hit2| hit1.t.partial_cmp(&hit2.t).unwrap());
+        })
+        .min_by(|hit1, hit2| hit1.t.partial_cmp(&hit2.t).unwrap()); // Get min hit by param `t`
 
-        if let Some(ref closest_hit) = self.closest_hit {
-            if let Some(ref hit_u) = hit {
+        if let Some(hit_u) = &hit {
+            if let Some(closest_hit) = &self.closest_hit {
                 if hit_u.t < closest_hit.t {
                     self.closest_hit = hit;
                 }
+            } else {
+                self.closest_hit = hit;
             }
-        } else {
-            self.closest_hit = hit;
         }
     }
 }
