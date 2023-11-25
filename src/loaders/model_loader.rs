@@ -13,7 +13,26 @@ pub fn load_model(path: &str) -> Vec<Triangle> {
     let input = BufReader::new(file);
     let model = parse_obj(input).unwrap();
     
-    let materials = load_materials(&model.material_libraries, path);
+    //let materials = load_materials(&model.material_libraries, path);
+    let materials: HashMap<String, Arc<Material>> =  model.meshes.iter().map(|(mesh_name, mesh)| {
+        let albedo: Vector3<f32> = match raw::material::MtlColor::Rgb(0.8, 0.8, 0.8) {
+            raw::material::MtlColor::Rgb(r, g, b) => Vector3::new(r, g, b),
+            raw::material::MtlColor::Xyz(_, _, _) => Vector3::new(0.8, 0.8, 0.8),
+            raw::material::MtlColor::Spectral(_, _) => Vector3::new(0.8, 0.8, 0.8),
+        };
+        let emission: Vector3<f32> = match raw::material::MtlColor::Rgb(0.0, 0.0, 0.0) {
+            raw::material::MtlColor::Rgb(r, g, b) => Vector3::new(r, g, b),
+            raw::material::MtlColor::Xyz(_, _, _) => Vector3::new(0.0, 0.0, 0.0),
+            raw::material::MtlColor::Spectral(_, _) => Vector3::new(0.0, 0.0, 0.0),
+        };
+        let material = Arc::new(Material::new(
+            albedo,
+            emission,
+            1.0,
+            0.0
+        ));
+        (mesh_name.clone(), material)
+    }).collect();
     load_meshes(&model, &materials)
 }
 
@@ -111,7 +130,7 @@ fn load_materials(libs: &[String], path: &str) -> HashMap<String, Arc<Material>>
             panic!("Failed to load mtl file \"{}\" specified in \"{}\". Reason: Not found", &mtl, &path)
         );
         let input = BufReader::new(file);
-        let mat = parse_mtl(input).unwrap();
+        let mat: raw::RawMtl = parse_mtl(input).unwrap();
 
         materials.extend(mat.materials.iter().map(|(name, raw_material)| {
             let albedo: Vector3<f32> = match raw_material.diffuse.clone().unwrap_or(raw::material::MtlColor::Rgb(0.8, 0.8, 0.8)) {

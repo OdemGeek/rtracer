@@ -1,7 +1,7 @@
 use crate::entity::bvh::Bvh;
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
-use crate::math::ray::Ray;
+//use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::math::extensions::*;
@@ -46,10 +46,11 @@ impl Render {
                 hits.sort_by(|x, y| y.t.partial_cmp(&x.t).unwrap());
                 
                 for hit in hits {
-                    let mut bvh_color: Vector3<f32> = random_vector3(&mut (hit.object.first_object + hit.object.object_count));
+                    let mut bvh_color: Vector3<f32> = random_vector3(&mut ((hit.object.first_object + hit.object.object_count) as u32));
                     let hit_point = ray.origin + ray.direction * hit.t;
                     let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 15.0).clamp(0.0, 1.0);
-                    bvh_color = lerp_vector3(&Vector3::new(0.9, 0.9, 0.9), &bvh_color, distance_to_edge.clamp(0.0, 1.0));
+                    let edge_color = Vector3::new(0.9, 0.9, 0.9);
+                    bvh_color = lerp_vector3(&edge_color, &bvh_color, distance_to_edge.clamp(0.0, 1.0));
                     color = lerp_vector3(&color, &bvh_color, 0.3);
                 }
 
@@ -57,9 +58,10 @@ impl Render {
                 *pixel = blended_color;
                 return;
             }
-            const MAX_BOUNCES: u32 = 8;
-            for bounce_index in 0..MAX_BOUNCES {
+            const MAX_BOUNCES: u32 = 3;
+            for _ in 0..MAX_BOUNCES {
                 // Calculate intersection
+                seed = pcg::hash(seed);
                 let hit_option = scene.cast_ray(&ray);
                 // Calculate fragment
                 if let Some(hit) = hit_option {
@@ -68,34 +70,11 @@ impl Render {
                     ray.origin = hit.point + hit.normal * 0.001;
                     let reflection: Vector3<f32> = reflect(&ray.direction, &hit.normal);
                     let diffuse: Vector3<f32> = (hit.normal + random_direction(&mut seed)).normalize();
-                    
-                    let additional_emission = if !scene.light_objects.is_empty() {
-                        let random_index = pcg::random_u32(&mut seed) % scene.light_objects.len() as u32;
-                        let random_light_object = &scene.objects[scene.light_objects[random_index as usize] as usize];
-                        let light_object_midpoint: Vector3<f32> = random_light_object.random_point(&mut seed);
-                        let random_ray = Ray::new(ray.origin, (light_object_midpoint - ray.origin).normalize());
-                        let additional_ray = scene.cast_ray(&random_ray);
-                        if let Some(ar) = additional_ray {
-                            ar.object.material.emission *
-                            random_ray.direction.dot(&hit.normal).max(0.0) *
-                            random_ray.direction.dot(&-ar.normal).max(0.0) *
-                            (1.0 / ar.t.powi(2))
-                        } else {
-                            Vector3::zeros()
-                        }
-                    } else {
-                        Vector3::zeros()
-                    };
 
-                    // Roughness don't work as expected
                     ray.direction = lerp_vector3(&reflection, &diffuse, material.roughness).normalize();
                     
-                    //let llight = material.emission.component_mul(&color);
-                    if bounce_index == 0 {
-                        light += material.emission.component_mul(&color);
-                    }
+                    light += material.emission.component_mul(&color);
                     color = color.component_mul(&material.albedo);
-                    light += additional_emission.component_mul(&color) * 0.0625;
 
                 } else {
                     light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
@@ -113,6 +92,7 @@ impl Render {
     #[inline]
     pub fn reset_accumulated_frames(&mut self) {
         self.accumulated_frames = 0;
+        self.seed = 153544;
     }
 
     #[inline]

@@ -8,13 +8,13 @@ pub struct Bvh {
     pub aabb_min: Vector3<f32>,
     pub aabb_max: Vector3<f32>,
     /// Also used as left_node_index
-    pub first_object: u32,
-    pub object_count: u32,
+    pub first_object: usize,
+    pub object_count: usize,
 }
 
 impl Bvh {
     #[inline]
-    pub fn new(first_object: u32, object_count: u32) -> Self {
+    pub fn new(first_object: usize, object_count: usize) -> Self {
         Bvh {
             aabb_min: Vector3::zeros(),
             aabb_max: Vector3::zeros(),
@@ -104,6 +104,7 @@ impl Bvh {
     }
 
     #[inline]
+    /// Returns (split_pos, divide_axis)
     pub fn division_plane(aabb_min: Vector3<f32>, aabb_max: Vector3<f32>) -> (f32, u32) {
         let x_len = aabb_max.x - aabb_min.x;
         let y_len = aabb_max.y - aabb_min.y;
@@ -121,6 +122,7 @@ impl Bvh {
 
 #[derive(Debug)]
 pub struct BoundsTriangle {
+    pub object_index: usize,
     pub centroid: Vector3<f32>,
     pub aabb_min: Vector3<f32>,
     pub aabb_max: Vector3<f32>,
@@ -128,9 +130,10 @@ pub struct BoundsTriangle {
 
 impl BoundsTriangle {
     #[inline]
-    pub fn new(point1: Vector3<f32>, point2: Vector3<f32>, point3: Vector3<f32>) -> Self {
+    pub fn new(object_index: usize, point1: Vector3<f32>, point2: Vector3<f32>, point3: Vector3<f32>) -> Self {
         let (min_bounds, max_bounds) = Self::bounds_from_points(point1, point2, point3);
         BoundsTriangle {
+            object_index,
             centroid: (point1 + point2 + point3) / 3.0,
             aabb_min: min_bounds,
             aabb_max: max_bounds
@@ -162,6 +165,7 @@ mod tests {
     #[test]
     fn triangle_bounds_from_points() {
         let triangle = BoundsTriangle::new(
+            0,
             Vector3::new(-0.5, 0.0, 0.0),
             Vector3::new(1.2, 0.0, -0.25),
             Vector3::new(0.0, 1.0, 0.0)

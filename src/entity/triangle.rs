@@ -1,7 +1,6 @@
 use std::sync::Arc;
 use nalgebra::Vector3;
 use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
-use super::hit::Hittable;
 
 // Maybe change it to pointer to vertex slice of vertexes
 #[derive(Debug)]
@@ -52,7 +51,6 @@ impl Triangle {
         (1.0 - r1sqrt) * self.vertex1 + r1sqrt * (1.0 - r2) * self.vertex2 + r1sqrt * r2 * self.vertex3
     }
 
-    // Code provided by ChatGPT
     #[inline]
     pub fn plane_normal(&self) -> Vector3<f32> {
         // Calculate the normal vector of the triangle (cross product of two sides)
@@ -83,11 +81,11 @@ impl Triangle {
 }
 
 #[allow(dead_code)]
-impl Hittable<Self> for Triangle {
+impl Triangle {
     // Möller–Trumbore intersection algorithm, but some lines changed
     #[inline]
     #[allow(clippy::manual_range_contains)]
-    fn intersect(&self, ray: &Ray) -> Option<Intersection<Self>> {
+    pub fn intersect(&self, ray: &Ray) -> Option<Intersection<Self>> {
         const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;
@@ -131,7 +129,7 @@ impl Hittable<Self> for Triangle {
     }
 
     #[inline(always)]
-    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
+    pub fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         self.normal_flipped(ray_direction)
     }
 }

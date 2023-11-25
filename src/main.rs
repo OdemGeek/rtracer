@@ -36,6 +36,8 @@ fn time_since_startup(start_time: Instant) -> f32 {
     Instant::now().duration_since(start_time).as_secs_f32()
 }
 
+// REWRITE THIS TO SEPERATE SYSTEM!
+#[allow(clippy::too_many_arguments)]
 fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
         main_thread_wait_elapsed: Duration, render_thread_wait_elapsed: Duration,
         logic_elapsed: Duration, render_elapsed: Duration,
@@ -43,7 +45,10 @@ fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
         clear_console: bool) {
     // Remove previous lines
     if clear_console {
-        print!("\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K\x1B[1A\x1B[K");
+        // Let's not talk about it
+        for _ in 0..10 {
+            print!("\x1B[1A\x1B[K");
+        }
     }
     // Print new lines
     println!("Render time: {accumulation_time:.2?}\nSample count: {sample_count:?}");
@@ -72,22 +77,8 @@ impl RenderData {
     }
 }
 
-
-
-// TODO: render thread pause is too long in logic stage
-// Need to copy data, unlock data, process copy of it
-fn main() {
-    let _start_time = Instant::now();
-    let mut imgx = 800u32;
-    let mut imgy = 800u32;
-    let mut max_samples = 0u32;
-    
-    // Get command line arguments
-    let args: Vec<String> = env::args().collect();
-    
-    // Print help text
-    if args.len() == 2 && args[1].to_lowercase() == "help" {
-        println!("
+fn print_help() {
+    println!("
     █▀▀█ ▀▀█▀▀ █▀▀█ █▀▀█ █▀▀ █▀▀ █▀▀█ 
     █▄▄▀   █   █▄▄▀ █▄▄█ █   █▀▀ █▄▄▀ 
     █  █   █   ▀ ▀▀ ▀  ▀ ▀▀▀ ▀▀▀ ▀ ▀▀
@@ -102,6 +93,22 @@ Argument syntax:
     If no arguments passed SampleCount is set to 0, ImageWidth and ImageHeight is 800
     If SampleCount is 0, render is infinite.
          ");
+}
+
+// TODO: render thread pause is too long in logic stage
+// Need to copy data, unlock data, process copy of it
+fn main() {
+    let _start_time = Instant::now();
+    let mut imgx = 800u32;
+    let mut imgy = 800u32;
+    let mut max_samples = 0u32;
+    
+    // Get command line arguments
+    let args: Vec<String> = env::args().collect();
+    
+    // Print help text
+    if args.len() == 2 && args[1].to_lowercase() == "help" {
+        print_help();
         return;
     }
     
@@ -159,7 +166,7 @@ Argument syntax:
     
     // Create a window with the specified dimensions
     let mut window = Window::new(
-        "Rust Window",
+        "RTracer",
         imgx as usize,
         imgy as usize,
         WindowOptions::default(),
