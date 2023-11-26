@@ -1,0 +1,101 @@
+# Blender 4.0.0 MTL File: 'None'
+# www.blender.org
+
+newmtl BackWheel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/BackWheel_BackWheel_BaseColor.png
+map_Ns C:/BackWheel_BackWheel_Roughness.png
+map_refl C:/BackWheel_BackWheel_Metallic.png
+
+newmtl BigWheel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/BigWheel_BigWheel_BaseColor.png
+map_Ns C:/BigWheel_BigWheel_Roughness.png
+map_refl C:/BigWheel_BigWheel_Metallic.png
+
+newmtl FrontWheel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/FrontWheel_FrontWheel_BaseColor.png
+map_Ns C:/FrontWheel_FrontWheel_Roughness.png
+map_refl C:/FrontWheel_FrontWheel_Metallic.png
+
+newmtl Gun
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/TankVk3002M_Gun_BaseColor.png
+map_Ns C:/TankVk3002M_Gun_Roughness.png
+map_refl C:/TankVk3002M_Gun_Metallic.png
+
+newmtl GunStock
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/TankVk3002M_GunStock_BaseColor.png
+map_Ns C:/TankVk3002M_GunStock_Roughness.png
+map_refl C:/TankVk3002M_GunStock_Metallic.png
+
+newmtl Head
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/TankVk3002M_Head_BaseColor.png
+map_Ns C:/TankVk3002M_Head_Roughness.png
+map_refl C:/TankVk3002M_Head_Metallic.png
+
+newmtl Hull
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/TankVk3002M_Hull_BaseColor.png
+map_Ns C:/TankVk3002M_Hull_Roughness.png
+map_refl C:/TankVk3002M_Hull_Metallic.png
+
+newmtl HullDetails
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/TankVk3002M_Hull_BaseColor.png
+map_Ns C:/TankVk3002M_Hull_Roughness.png
+map_refl C:/TankVk3002M_Hull_Metallic.png
+
+newmtl SmallWheel
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/SmallWheel_SmallWheel_BaseColor.png
+map_Ns C:/SmallWheel_SmallWheel_Roughness.png
+map_refl C:/SmallWheel_SmallWheel_Metallic.png

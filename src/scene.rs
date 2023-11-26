@@ -183,7 +183,7 @@ impl SceneData {
         bvh_intersection.closest_hit.map(|hit| Hit::new(
             hit.t,
             ray.origin + ray.direction * hit.t,
-            hit.object.normal_flipped(&ray.direction),
+            hit.object.normal(&ray.direction),
             hit.object
         ))
     }

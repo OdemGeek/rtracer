@@ -1,0 +1,15 @@
+# Special file format for scene description in RTracer
+
+Model[
+#test.obj
+TankVk3002M_ModelPhysicsBackup.obj
+]Model
+
+Camera[
+# Position
+p 5 1.5 -6.5
+# Rotation in degrees
+r 15 -45 0
+# Fov
+f 70
+]Camera
