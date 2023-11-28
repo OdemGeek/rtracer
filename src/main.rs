@@ -1,22 +1,13 @@
 use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}};
 use std::thread;
 use std::sync::atomic::Ordering;
-mod math;
-mod shaders;
-use math::extensions::u32_from_u8_rgb;
+use rtracer::math::extensions::u32_from_u8_rgb;
 use nalgebra::{Vector3, Vector2};
-mod entity;
-mod camera;
-use camera::Camera;
+use rtracer::camera::Camera;
 use minifb::{Key, Window, WindowOptions};
-mod scene;
-use scene::SceneData;
-mod render;
-use render::Render;
-mod textures;
-mod material;
-mod loaders;
-use loaders::scene_loader::load_scene;
+use rtracer::scene::SceneData;
+use rtracer::render::Render;
+use rtracer::loaders::scene_loader::load_scene;
 
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
@@ -211,14 +202,14 @@ fn main() {
     // Create a condition variable to signal the thread to resume
     let condvar = Arc::new(Condvar::new());
 
+    println!();
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, main_thread_wait_elapsed, render_wait_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
+    
     // Clone references to the mutex and condition variable for the thread to use
     let thread_render_data = Arc::clone(&render_data);
     let thread_condvar = Arc::clone(&condvar);
     let thread_pause = Arc::clone(&pause);
     let thread_stop = Arc::clone(&stop);
-
-    println!();
-    print_times(accumulation_time.elapsed(), total_frame_elapsed, main_thread_wait_elapsed, render_wait_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
 
     let render_thread = thread::spawn(move || {
         // Access the shared data via the mutex

@@ -1,14 +1,14 @@
-use super::bvh::Bvh;
+use super::BvhNode;
 
 pub struct BvhDepth<'a> {
-    pub data: &'a [Bvh],
+    pub data: &'a [BvhNode],
     pub depth: u32,
-    pub bvhs: Vec<&'a Bvh>
+    pub bvhs: Vec<&'a BvhNode>
 }
 
 impl BvhDepth<'_> {
     #[inline]
-    pub fn new(data: &[Bvh], depth: u32) -> BvhDepth<'_> {
+    pub fn new(data: &[BvhNode], depth: u32) -> BvhDepth<'_> {
         BvhDepth { data, depth, bvhs: vec![] }
     }
 

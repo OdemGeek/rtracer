@@ -1,7 +1,6 @@
-use crate::entity::bvh::Bvh;
+use crate::bvh::BvhNode;
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
-//use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::math::extensions::*;
@@ -13,7 +12,7 @@ pub struct Render {
     pub debug_depth: u32,
     pub bvh_debug: bool,
     accumulated_frames: u32,
-    seed: u32,
+    seed: u32
 }
 
 impl Render {
@@ -40,9 +39,9 @@ impl Render {
             let mut light: Vector3<f32> = Vector3::zeros();
 
             if self.bvh_debug {
-                let bvhs: Vec<&Bvh> = scene.get_bvh_by_depth(self.debug_depth);
+                let bvhs: Vec<&BvhNode> = scene.get_bvh_by_depth(self.debug_depth);
                 color = Vector3::new(0.005, 0.005, 0.005);
-                let mut hits: Vec<Intersection<Bvh>> = bvhs.iter().filter_map(|x| x.intersect_point(&ray)).flatten().collect();
+                let mut hits: Vec<Intersection<BvhNode>> = bvhs.iter().filter_map(|x| x.intersect_point(&ray)).flatten().collect();
                 hits.sort_by(|x, y| y.t.partial_cmp(&x.t).unwrap());
                 
                 for hit in hits {

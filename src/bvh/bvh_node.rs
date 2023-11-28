@@ -1,10 +1,8 @@
 use nalgebra::Vector3;
-use crate::math::ray::Ray;
-
-use super::hit::Intersection;
+use crate::{math::ray::Ray, entity::{hit::{Intersection, Hittable}, Bounds}};
 
 #[derive(Debug, Clone)]
-pub struct Bvh {
+pub struct BvhNode {
     pub aabb_min: Vector3<f32>,
     pub aabb_max: Vector3<f32>,
     /// Also used as left_node_index
@@ -12,10 +10,10 @@ pub struct Bvh {
     pub object_count: usize,
 }
 
-impl Bvh {
+impl BvhNode {
     #[inline]
     pub fn new(first_object: usize, object_count: usize) -> Self {
-        Bvh {
+        BvhNode {
             aabb_min: Vector3::zeros(),
             aabb_max: Vector3::zeros(),
             first_object,
@@ -41,7 +39,7 @@ impl Bvh {
     }
 
     #[inline]
-    pub fn intersect_point<'a>(&'a self, ray: &Ray) -> Option<Vec<Intersection<'a, Bvh>>> {
+    pub fn intersect_point<'a>(&'a self, ray: &Ray) -> Option<Vec<Intersection<'a, BvhNode>>> {
         let dirfrac = Vector3::new(
             1.0 / ray.direction.x,
             1.0 / ray.direction.y,
@@ -73,15 +71,15 @@ impl Bvh {
         }
 
         if tmin < 0.0 {
-            return Some(vec![Intersection::<'a, Bvh>::new(tmax, self)]);
+            return Some(vec![Intersection::<'a, BvhNode>::new(tmax, self)]);
         }
 
         if tmin < 0.0 {
-            return Some(vec![Intersection::<'a, Bvh>::new(tmax, self)]);
+            return Some(vec![Intersection::<'a, BvhNode>::new(tmax, self)]);
         }
 
         // t = tmin;
-        Some(vec![Intersection::<'a, Bvh>::new(tmin, self), Intersection::<'a, Bvh>::new(tmax, self)])
+        Some(vec![Intersection::<'a, BvhNode>::new(tmin, self), Intersection::<'a, BvhNode>::new(tmax, self)])
     }
 
     #[inline]
@@ -120,89 +118,61 @@ impl Bvh {
     }
 }
 
-#[derive(Debug)]
-pub struct BoundsTriangle {
-    pub object_index: usize,
-    pub centroid: Vector3<f32>,
-    pub aabb_min: Vector3<f32>,
-    pub aabb_max: Vector3<f32>,
-}
-
-impl BoundsTriangle {
-    #[inline]
-    pub fn new(object_index: usize, point1: Vector3<f32>, point2: Vector3<f32>, point3: Vector3<f32>) -> Self {
-        let (min_bounds, max_bounds) = Self::bounds_from_points(point1, point2, point3);
-        BoundsTriangle {
-            object_index,
-            centroid: (point1 + point2 + point3) / 3.0,
-            aabb_min: min_bounds,
-            aabb_max: max_bounds
+impl From<BvhNode> for Bounds {
+    fn from(value: BvhNode) -> Self {
+        Bounds {
+            centroid: (value.aabb_max + value.aabb_min) / 2.0,
+            aabb_min: value.aabb_min,
+            aabb_max: value.aabb_max
         }
     }
-
-    #[inline]
-    fn bounds_from_points(point1: Vector3<f32>, point2: Vector3<f32>, point3: Vector3<f32>) -> (Vector3<f32>, Vector3<f32>) {
-        let points: Vec<Vector3<f32>> = vec![point1, point2, point3];
-
-        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-
-        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-
-        (Vector3::new(x_min, y_min, z_min), Vector3::new(x_max, y_max, z_max))
-    }
 }
 
-#[cfg(test)]
-mod tests {
-    use nalgebra::Vector3;
-    use crate::{entity::bvh::BoundsTriangle, math::ray::Ray};
-    use super::Bvh;
-
-    #[test]
-    fn triangle_bounds_from_points() {
-        let triangle = BoundsTriangle::new(
-            0,
-            Vector3::new(-0.5, 0.0, 0.0),
-            Vector3::new(1.2, 0.0, -0.25),
-            Vector3::new(0.0, 1.0, 0.0)
-        );
-        assert_eq!(triangle.aabb_min, Vector3::new(-0.5, 0.0, -0.25));
-        assert_eq!(triangle.aabb_max, Vector3::new(1.2, 1.0, 0.0));
-    }
-
-    #[test]
-    fn bvh_intersection() {
-        let mut bvh = Bvh::new(0, 0);
-        bvh.aabb_min = Vector3::new(-1.0, -1.0, -1.0);
-        bvh.aabb_max = Vector3::new(1.0, 1.0, 1.0);
-
-        let ray = Ray::new(
-            Vector3::new(0.0, 0.0, -5.0),
-            Vector3::new(0.0, 0.0, 1.0)
+impl Hittable<BvhNode> for BvhNode {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection<BvhNode>> {
+        let dirfrac = Vector3::new(
+            1.0 / ray.direction.x,
+            1.0 / ray.direction.y,
+            1.0 / ray.direction.z
         );
 
-        let result = bvh.intersect(&ray);
-        assert!(result);
-    }
-    
-    #[test]
-    fn division_plane() {
-        let mut bvh = Bvh::new(0, 0);
-        bvh.aabb_min = Vector3::new(-1.0, -1.0, -2.0);
-        bvh.aabb_max = Vector3::new(1.0, 1.0, 2.0);
+        let t1 = (self.aabb_min.x - ray.origin.x) * dirfrac.x;
+        let t2 = (self.aabb_max.x - ray.origin.x) * dirfrac.x;
+        let t3 = (self.aabb_min.y - ray.origin.y) * dirfrac.y;
+        let t4 = (self.aabb_max.y - ray.origin.y) * dirfrac.y;
+        let t5 = (self.aabb_min.z - ray.origin.z) * dirfrac.z;
+        let t6 = (self.aabb_max.z - ray.origin.z) * dirfrac.z;
 
-        //let (split_pos, division_plane) = bvh.division_plane();
-        //assert_eq!(division_plane, 2);
-        //assert_eq!(split_pos, 0.0);
+        let tmin = f32::max(f32::max(f32::min(t1, t2),
+            f32::min(t3, t4)), f32::min(t5, t6));
+        let tmax = f32::min(f32::min(f32::max(t1, t2),
+            f32::max(t3, t4)), f32::max(t5, t6));
+
+        // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+        if tmax < 0.0 {
+            // t = tmax;
+            return None;
+        }
+
+        // if tmin > tmax, ray doesn't intersect AABB
+        if tmin > tmax {
+            // t = tmax;
+            return None;
+        }
+
+        if tmin < 0.0 {
+            return Some(Intersection::<BvhNode>::new(tmax, self));
+        }
+
+        if tmin < 0.0 {
+            return Some(Intersection::<BvhNode>::new(tmax, self));
+        }
+
+        // t = tmin;
+        Some(Intersection::<BvhNode>::new(tmin, self))
     }
 
-    
-    #[test]
-    fn plane_relative_position() {
-        
+    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
+        *ray_direction
     }
 }

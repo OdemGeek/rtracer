@@ -2,6 +2,8 @@ use std::sync::Arc;
 use nalgebra::Vector3;
 use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
 
+use super::hit::Hittable;
+
 // Maybe change it to pointer to vertex slice of vertexes
 #[derive(Debug)]
 pub struct Triangle {
@@ -39,10 +41,47 @@ impl Triangle {
         self.vertex3
     }
 
+    
+    
+    #[inline]
+    pub fn plane_normal(&self) -> Vector3<f32> {
+        // Calculate the normal vector of the triangle (cross product of two sides)
+        let v1 = Vector3::new(
+            self.vertex2.x - self.vertex1.x,
+            self.vertex2.y - self.vertex1.y,
+            self.vertex2.z - self.vertex1.z,
+        );
+        let v2 = Vector3::new(
+            self.vertex3.x - self.vertex1.x,
+            self.vertex3.y - self.vertex1.y,
+            self.vertex3.z - self.vertex1.z,
+        );
+
+        Vector3::new(
+            v1.y * v2.z - v1.z * v2.y,
+            v1.z * v2.x - v1.x * v2.z,
+            v1.x * v2.y - v1.y * v2.x,
+        ).normalize()
+    }
+
+    #[inline]
+    pub fn random_point(&self, seed: &mut u32) -> Vector3<f32> {
+        // Shape Distributions
+        // ROBERT OSADA, THOMAS FUNKHOUSER, BERNARD CHAZELLE, and DAVID DOBKIN
+        // Princeton University
+        // P = (1 - sqrt(r1))*A + sqrt(r1)*(1 - r2)*B + sqrt(r1)*r2*C
+        // Where A, B, C is vertices and r1, r2 is uniform random values in range 0-1
+        let r1sqrt = pcg::random_f32(seed).sqrt();
+        let r2 = pcg::random_f32(seed);
+        (1.0 - r1sqrt) * self.vertex1 + r1sqrt * (1.0 - r2) * self.vertex2 + r1sqrt * r2 * self.vertex3
+    }
+}
+
+impl Hittable<Triangle> for Triangle {
     // Möller–Trumbore intersection modified algorithm
     #[inline]
     #[allow(clippy::manual_range_contains)]
-    pub fn intersect(&self, ray: &Ray) -> Option<Intersection<Self>> {
+    fn intersect(&self, ray: &Ray) -> Option<Intersection<Self>> {
         const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;
@@ -79,42 +118,9 @@ impl Triangle {
     }
 
     #[inline]
-    pub fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
+    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         let direction = self.normal.dot(ray_direction);
         let is_flipped = if direction > 0.0 {-1.0} else {1.0};
         self.normal * is_flipped
-    }
-    
-    #[inline]
-    pub fn plane_normal(&self) -> Vector3<f32> {
-        // Calculate the normal vector of the triangle (cross product of two sides)
-        let v1 = Vector3::new(
-            self.vertex2.x - self.vertex1.x,
-            self.vertex2.y - self.vertex1.y,
-            self.vertex2.z - self.vertex1.z,
-        );
-        let v2 = Vector3::new(
-            self.vertex3.x - self.vertex1.x,
-            self.vertex3.y - self.vertex1.y,
-            self.vertex3.z - self.vertex1.z,
-        );
-
-        Vector3::new(
-            v1.y * v2.z - v1.z * v2.y,
-            v1.z * v2.x - v1.x * v2.z,
-            v1.x * v2.y - v1.y * v2.x,
-        ).normalize()
-    }
-
-    #[inline]
-    pub fn random_point(&self, seed: &mut u32) -> Vector3<f32> {
-        // Shape Distributions
-        // ROBERT OSADA, THOMAS FUNKHOUSER, BERNARD CHAZELLE, and DAVID DOBKIN
-        // Princeton University
-        // P = (1 - sqrt(r1))*A + sqrt(r1)*(1 - r2)*B + sqrt(r1)*r2*C
-        // Where A, B, C is vertices and r1, r2 is uniform random values in range 0-1
-        let r1sqrt = pcg::random_f32(seed).sqrt();
-        let r2 = pcg::random_f32(seed);
-        (1.0 - r1sqrt) * self.vertex1 + r1sqrt * (1.0 - r2) * self.vertex2 + r1sqrt * r2 * self.vertex3
     }
 }

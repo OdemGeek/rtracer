@@ -10,6 +10,10 @@ edition = "2021"
 codegen-units=1
 opt-level = 3
 
+#[profile.rustflags]
+#rustflags=["-C target-feature=+sse3,+avx,+fma"]
+#target-cpu="native"
+
 [dependencies]
 image = "0.24.6"
 minifb = "0.24.0"
