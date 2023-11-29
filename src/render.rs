@@ -7,21 +7,21 @@ use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::math::extensions::*;
 use crate::textures::texture::{Texture, self};
-use nalgebra::{Vector2, Vector3, Rotation3};
+use nalgebra::{Vector2, Vector3, Rotation3, SimdPartialOrd};
 use rayon::prelude::*;
 
 pub struct Render {
     pub texture_buffer: Vec<Vector3<f32>>,
     pub debug_depth: u32,
     pub bvh_debug: bool,
-    pub texture: Texture,
+    pub texture: Texture<Vector3<f32>>,
     accumulated_frames: u32,
     seed: u32
 }
 
 impl Render {
     #[inline]
-    pub fn new(width: u32, height: u32, sky_texture: Texture) -> Self {
+    pub fn new(width: u32, height: u32, sky_texture: Texture<Vector3<f32>>) -> Self {
         Render {
             texture_buffer: vec![Vector3::zeros(); (width * height) as usize],
             debug_depth: 0,

@@ -3,7 +3,7 @@ use std::thread;
 use std::sync::atomic::Ordering;
 use rtracer::math::extensions::{u32_from_u8_rgb, f32_vector3_from_u32};
 use rtracer::textures::texture::TextureSamplingMode;
-use rtracer::textures::extensions::file_to_texture;
+use rtracer::textures::extensions_f32::file_to_texture;
 use nalgebra::{Vector3, Vector2};
 use rtracer::camera::Camera;
 use minifb::{Key, Window, WindowOptions};
@@ -89,8 +89,8 @@ Argument syntax:
 }
 
 
-// TODO: render thread pause is too long in logic stage
-// Need to copy data, unlock data, process copy of it
+// For some reason image crate can't load .hdr files with correct exposure
+// So if you want high dinamic range please use .exr
 fn main() {
     let _start_time = Instant::now();
     let mut imgx = 800u32;
@@ -151,7 +151,7 @@ fn main() {
     scene_data.calculate_bvh();
 
     // Load skybox image
-    let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.hdr", TextureSamplingMode::Clamp);
+    let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.exr", TextureSamplingMode::Clamp);
     println!("Sky width: {}", skybox_texture.width());
     println!("Sky height: {}", skybox_texture.height());
 

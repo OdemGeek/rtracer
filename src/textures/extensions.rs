@@ -20,7 +20,7 @@ fn image_to_buffer(image: image::DynamicImage) -> Vec<u32> {
 
 #[allow(dead_code)]
 #[inline]
-pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSamplingMode) -> Texture {
+pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSamplingMode) -> Texture<u32> {
     let buffer = image.to_rgb8().pixels().map(|p| {
         let rgb = p;
         u32_from_u8_rgb(rgb[0], rgb[1], rgb[2])
@@ -31,7 +31,7 @@ pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSampli
 
 #[allow(dead_code)]
 #[inline]
-pub fn file_to_texture(path: &str, sampling_mode: TextureSamplingMode) -> Texture {
+pub fn file_to_texture(path: &str, sampling_mode: TextureSamplingMode) -> Texture<u32> {
     let image = load_image(path);
 
     image_to_texture(image, sampling_mode)
@@ -52,7 +52,7 @@ fn save_image_to_file(texture_buffer: &[u32], image_width: u32, image_height: u3
 
 #[allow(dead_code)]
 #[inline]
-pub fn texture_to_file(texture: Texture, path: &str) {
+pub fn texture_to_file(texture: Texture<u32>, path: &str) {
     save_image_to_file(
     texture.get_buffer_read(),
     texture.width() as u32,
