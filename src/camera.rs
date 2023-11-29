@@ -49,6 +49,6 @@ impl Camera {
             + (screen_pos.x + random_x_offset) * x_inc_vector
             + (screen_pos.y + random_y_offset) * y_inc_vector;
         let cast_ray = view_plane_point;
-        Ray::new(self.anchor.position(), cast_ray)
+        Ray::new(self.anchor.position(), cast_ray.normalize())
     }
 }

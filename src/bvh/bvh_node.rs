@@ -119,7 +119,19 @@ impl BvhNode {
 }
 
 impl From<BvhNode> for Bounds {
+    #[inline]
     fn from(value: BvhNode) -> Self {
+        Bounds {
+            centroid: (value.aabb_max + value.aabb_min) / 2.0,
+            aabb_min: value.aabb_min,
+            aabb_max: value.aabb_max
+        }
+    }
+}
+
+impl From<&BvhNode> for Bounds {
+    #[inline]
+    fn from(value: &BvhNode) -> Self {
         Bounds {
             centroid: (value.aabb_max + value.aabb_min) / 2.0,
             aabb_min: value.aabb_min,

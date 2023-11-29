@@ -38,7 +38,7 @@ impl Bvh {
         let mut bvh_intersection = BvhIntersection::new(self);
         bvh_intersection.intersect_hierarchy(ray, objects);
 
-        bvh_intersection.closest_hit.map(|hit| Hit::new(
+        bvh_intersection.closest_hit.map(move |hit| Hit::new(
             hit.t,
             ray.origin + ray.direction * hit.t,
             hit.object.normal(&ray.direction),
@@ -55,10 +55,9 @@ impl Bvh {
 
     #[inline]
     pub fn calculate_bvh(&mut self, objects_bounds: Vec<Bounds>) {
-        let timer = Instant::now();
         self.objects_indexes = (0..objects_bounds.len()).collect();
         self.objects_bounds = objects_bounds;
-        println!("Bounds generation time: {} ms", timer.elapsed().as_millis());
+
 
         let timer = Instant::now();
 
@@ -82,7 +81,7 @@ impl Bvh {
 
         self.bvhs.resize(self.nodes_used, BvhNode::new(0, 0));
 
-        println!("BVH generation time: {} ms", timer.elapsed().as_millis());
+        //println!("BVH generation time: {} ms", timer.elapsed().as_millis());
         /*self.bvhs.iter().enumerate().for_each(|x| {
             println!("{} {:?}\n", x.0, x.1);
         });

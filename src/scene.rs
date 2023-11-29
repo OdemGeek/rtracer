@@ -1,4 +1,6 @@
+use std::time::Instant;
 use crate::{math::ray::Ray, entity::{hit::Hit, triangle::Triangle, Bounds}, bvh::{BvhNode, Bvh}};
+use rayon::prelude::*;
 
 pub struct SceneData {
     pub objects: Vec<Triangle>,
@@ -15,7 +17,6 @@ impl SceneData {
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn add_object(&mut self, object: Triangle) -> &Triangle {
         self.objects.push(object);
         let triangle = self.objects.last().unwrap();
@@ -24,18 +25,16 @@ impl SceneData {
 
     #[inline]
     pub fn calculate_bvh(&mut self) {
+        let timer = Instant::now();
         let objects_bounds: Vec<Bounds> = Self::calculate_objects_bounds(&self.objects);
+        println!("Bounds generation time: {} ms", timer.elapsed().as_millis());
         self.bvh_accel.calculate_bvh(objects_bounds);
     }
 
     #[inline]
     fn calculate_objects_bounds(objects: &[Triangle]) -> Vec<Bounds> {
-        objects.iter().enumerate().map(
-            |x| Bounds::new(
-                x.1.vertex1(),
-                x.1.vertex2(),
-                x.1.vertex3(),
-            )
+        objects.par_iter().map(
+            |x| x.into()
         ).collect()
     }
 

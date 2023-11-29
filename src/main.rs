@@ -1,7 +1,9 @@
-use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}};
+use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}, io};
 use std::thread;
 use std::sync::atomic::Ordering;
-use rtracer::math::extensions::u32_from_u8_rgb;
+use rtracer::math::extensions::{u32_from_u8_rgb, f32_vector3_from_u32};
+use rtracer::textures::texture::TextureSamplingMode;
+use rtracer::textures::extensions::file_to_texture;
 use nalgebra::{Vector3, Vector2};
 use rtracer::camera::Camera;
 use minifb::{Key, Window, WindowOptions};
@@ -86,6 +88,7 @@ Argument syntax:
          ");
 }
 
+
 // TODO: render thread pause is too long in logic stage
 // Need to copy data, unlock data, process copy of it
 fn main() {
@@ -93,7 +96,7 @@ fn main() {
     let mut imgx = 800u32;
     let mut imgy = 800u32;
     let mut max_samples = 0u32;
-    
+
     // Get command line arguments
     let args: Vec<String> = env::args().collect();
     
@@ -148,7 +151,9 @@ fn main() {
     scene_data.calculate_bvh();
 
     // Load skybox image
-    //let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.png", TextureSamplingMode::Clamp);
+    let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.hdr", TextureSamplingMode::Clamp);
+    println!("Sky width: {}", skybox_texture.width());
+    println!("Sky height: {}", skybox_texture.height());
 
     // Setup camera
     camera.screen_width = imgx as u16;
@@ -168,7 +173,7 @@ fn main() {
     // Limit window fps to 120
     window.limit_update_rate(Some(Duration::from_secs_f32(1.0 / 120.0)));
 
-    let render = Render::new(imgx, imgy);
+    let render = Render::new(imgx, imgy, skybox_texture);
     let accumulation_time = Instant::now();
     let accumulated_time = Duration::ZERO;
     let render_elapsed = Duration::ZERO;

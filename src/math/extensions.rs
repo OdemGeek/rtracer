@@ -47,10 +47,10 @@ pub fn u32_from_u8_rgb(r: u8, g: u8, b: u8) -> u32 {
 #[allow(dead_code)]
 #[inline(always)]
 pub fn f32_vector3_from_u32(c: u32) -> Vector3<f32> {
-    let r = ((c & 0xFF0000) >> 16) as f32;
-    let g = ((c & 0x00FF00) >> 8) as f32;
-    let b = (c & 0x0000FF) as f32;
-    Vector3::new(r, g, b) / 255.0
+    let r = ((c & 0xFF0000) >> 16) as u8;
+    let g = ((c & 0x00FF00) >> 8) as u8;
+    let b = (c & 0x0000FF) as u8;
+    Vector3::new(r as f32, g as f32, b as f32) / 255.0
 }
 
 #[allow(dead_code)]

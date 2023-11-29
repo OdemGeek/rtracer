@@ -2,7 +2,7 @@ use std::sync::Arc;
 use nalgebra::Vector3;
 use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
 
-use super::hit::Hittable;
+use super::{hit::Hittable, Bounds};
 
 // Maybe change it to pointer to vertex slice of vertexes
 #[derive(Debug)]
@@ -122,5 +122,51 @@ impl Hittable<Triangle> for Triangle {
         let direction = self.normal.dot(ray_direction);
         let is_flipped = if direction > 0.0 {-1.0} else {1.0};
         self.normal * is_flipped
+    }
+}
+
+impl From<Triangle> for Bounds {
+    #[inline]
+    fn from(value: Triangle) -> Self {
+        let points: [Vector3<f32>; 3] = [value.vertex1, value.vertex2, value.vertex3];
+
+        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        let min_bounds = Vector3::new(x_min, y_min, z_min);
+        let max_bounds = Vector3::new(x_max, y_max, z_max);
+        Bounds {
+            centroid: (value.vertex1 + value.vertex2 + value.vertex3) / 3.0,
+            aabb_min: min_bounds,
+            aabb_max: max_bounds
+        }
+    }
+}
+
+impl From<&Triangle> for Bounds {
+    #[inline]
+    fn from(value: &Triangle) -> Self {
+        let points: [Vector3<f32>; 3] = [value.vertex1, value.vertex2, value.vertex3];
+
+        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+
+        let min_bounds = Vector3::new(x_min, y_min, z_min);
+        let max_bounds = Vector3::new(x_max, y_max, z_max);
+        Bounds {
+            centroid: (value.vertex1 + value.vertex2 + value.vertex3) / 3.0,
+            aabb_min: min_bounds,
+            aabb_max: max_bounds
+        }
     }
 }
