@@ -83,34 +83,18 @@ impl Bvh {
         }
 
         self.bvhs.resize(self.nodes_used, BvhNode::new(0, 0));
-
-        // Debug code
-        //println!("BVH generation time: {} ms", timer.elapsed().as_millis());
-        /*self.bvhs.iter().enumerate().for_each(|x| {
-            println!("{} {:?}\n", x.0, x.1);
-        });
-
-        let mut current_depth = 0;
-        loop {
-            let current_count = self.get_bvh_by_depth(current_depth).len();
-            if current_count == 0 {
-                break;
-            }
-            println!("Depth {}. Count: {}", current_depth, current_count);
-            current_depth += 1;
-        }*/
     }
 
     #[inline]
     fn calculate_childs(&mut self, bvh_index: usize) {
-        println!("Bvh: {}", bvh_index);
         let bvh = &self.bvhs[bvh_index];
+
         let e: Vector3<f32> = bvh.aabb_max - bvh.aabb_min; // extent of parent
-        let parent_area: f32 = e.x * e.y + e.y * e.z + e.z * e.x;
-        let parent_cost: f32 = bvh.object_count as f32 * parent_area;
+        let node_area: f32 = e.x * e.y + e.y * e.z + e.z * e.x;
+        let node_cost: f32 = bvh.object_count as f32 * node_area;
+
         let (split_pos, divide_axis, best_cost) = self.division_plane(bvh);
-        println!("Cost: {}, Objects count: {}", best_cost, bvh.object_count);
-        if best_cost >= parent_cost {
+        if best_cost >= node_cost {
             return;
         }
         // Divide
@@ -127,9 +111,7 @@ impl Bvh {
                 j -= 1;
             }
         }
-        
         let left_count = i - bvh.first_object;
-        // That's strange, if we divide in equal halfs it doesn't subdivide further
         if left_count == 0 || left_count == bvh.object_count {
             return;
         }
@@ -163,9 +145,19 @@ impl Bvh {
         let mut best_pos: f32 = 0.0;
         let mut best_cost: f32 = 1e30;
         for axis in 0..3 {
+            let mut bounds_min: f32 = 1e30;
+            let mut bounds_max: f32 = -1e30;
             for i in 0..bvh.object_count {
                 let centroid = &self.objects_centroids[bvh.first_object + i];
-                let candidate_pos: f32 = centroid[axis];
+                bounds_min = bounds_min.min(centroid[axis]);
+                bounds_max = bounds_max.max(centroid[axis]);
+            }
+            if bounds_min == bounds_max {
+                continue;
+            }
+            let scale: f32 = (bounds_max - bounds_min) / 16.0;
+            for i in 0..16 {
+                let candidate_pos: f32 = bounds_min + i as f32 * scale;
                 let cost: f32 = self.evaluate_sah(bvh, axis, candidate_pos);
                 if cost < best_cost {
                     best_axis = axis;
@@ -177,19 +169,6 @@ impl Bvh {
         let axis: i32 = best_axis as i32;
         let split_pos: f32 = best_pos;
         (split_pos, axis, best_cost)
-
-        // Old divide in half
-        /*let x_len = aabb_max.x - aabb_min.x;
-        let y_len = aabb_max.y - aabb_min.y;
-        let z_len = aabb_max.z - aabb_min.z;
-
-        if x_len >= y_len && x_len >= z_len {
-            ((aabb_max.x + aabb_min.x) / 2.0, 0)
-        } else if y_len >= x_len && y_len >= z_len {
-            ((aabb_max.y + aabb_min.y) / 2.0, 1)
-        } else {
-            ((aabb_max.z + aabb_min.z) / 2.0, 2)
-        }*/
     }
 
     #[inline]
@@ -237,6 +216,11 @@ impl Bvh {
         bvh.aabb_min = Vector3::new(x_min, y_min, z_min);
         bvh.aabb_max = Vector3::new(x_max, y_max, z_max);
     }
+}
+
+struct Bin {
+    pub aabb: Aabb,
+    pub object_count: usize
 }
 
 struct Aabb {
