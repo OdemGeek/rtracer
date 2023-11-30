@@ -5,16 +5,15 @@ use bvh_intersection::BvhIntersection;
 pub use bvh_depth::BvhDepth;
 pub use bvh_node::BvhNode;
 
-use std::time::Instant;
 use nalgebra::Vector3;
 use crate::math::ray::Ray;
 use crate::entity::hit::{Hit, Hittable};
 use crate::entity::Bounds;
 
 pub struct Bvh {
-    pub(super) bvhs: Vec<BvhNode>,
-    pub(super) objects_bounds: Vec<Bounds>,
-    pub(super) objects_indexes: Vec<usize>,
+    bvhs: Vec<BvhNode>,
+    objects_bounds: Vec<Bounds>,
+    objects_indexes: Vec<usize>,
     nodes_used: usize
 }
 
@@ -47,6 +46,11 @@ impl Bvh {
     }
 
     #[inline]
+    pub fn bvh_count(&self) -> usize {
+        self.bvhs.len()
+    }
+
+    #[inline]
     pub fn get_bvh_by_depth(&self, depth: u32) -> Vec<&BvhNode> {
         let mut bd = BvhDepth::new(&self.bvhs, depth);
         bd.intersect_hierarchy();
@@ -58,8 +62,8 @@ impl Bvh {
         self.objects_indexes = (0..objects_bounds.len()).collect();
         self.objects_bounds = objects_bounds;
 
-
-        let timer = Instant::now();
+        // Debug code
+        
 
         self.bvhs = Vec::with_capacity(self.objects_bounds.len() * 2 - 1);
         self.bvhs.resize(self.bvhs.capacity(), BvhNode::new(0, 0));
@@ -81,6 +85,7 @@ impl Bvh {
 
         self.bvhs.resize(self.nodes_used, BvhNode::new(0, 0));
 
+        // Debug code
         //println!("BVH generation time: {} ms", timer.elapsed().as_millis());
         /*self.bvhs.iter().enumerate().for_each(|x| {
             println!("{} {:?}\n", x.0, x.1);

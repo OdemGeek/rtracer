@@ -28,7 +28,9 @@ impl SceneData {
         let timer = Instant::now();
         let objects_bounds: Vec<Bounds> = Self::calculate_objects_bounds(&self.objects);
         println!("Bounds generation time: {} ms", timer.elapsed().as_millis());
+        let timer = Instant::now();
         self.bvh_accel.calculate_bvh(objects_bounds);
+        println!("BVH generation time: {} ms.\nBVH count: {}", timer.elapsed().as_millis(), self.bvh_accel.bvh_count());
     }
 
     #[inline]

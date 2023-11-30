@@ -1,5 +1,6 @@
 use nalgebra::Vector3;
 use obj::raw::{self, parse_mtl, parse_obj, RawObj};
+use std::path::Path;
 use std::{fs::File, collections::HashMap, sync::Arc};
 use std::io::BufReader;
 use crate::material::Material;
@@ -125,9 +126,12 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
 #[inline]
 fn load_materials(libs: &[String], path: &str) -> HashMap<String, Arc<Material>> {
     let mut materials: HashMap<String, Arc<Material>> = HashMap::new();
+    let parent_path = Path::new(path).parent().unwrap_or(Path::new(""));
+    
     for mtl in libs {
-        let file = File::open(mtl).unwrap_or_else(|_|
-            panic!("Failed to load mtl file \"{}\" specified in \"{}\". Reason: Not found", &mtl, &path)
+        let mtl_path = parent_path.join(Path::new(mtl));
+        let file = File::open(&mtl_path).unwrap_or_else(|_|
+            panic!("Failed to load mtl file \"{:?}\" specified in \"{}\". Reason: Not found", &mtl_path, &path)
         );
         let input = BufReader::new(file);
         let mat: raw::RawMtl = parse_mtl(input).unwrap();

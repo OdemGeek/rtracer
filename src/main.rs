@@ -1,7 +1,7 @@
-use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}, io};
+use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}};
 use std::thread;
 use std::sync::atomic::Ordering;
-use rtracer::math::extensions::{u32_from_u8_rgb, f32_vector3_from_u32};
+use rtracer::math::extensions::u32_from_u8_rgb;
 use rtracer::textures::texture::TextureSamplingMode;
 use rtracer::textures::extensions_f32::file_to_texture;
 use nalgebra::{Vector3, Vector2};

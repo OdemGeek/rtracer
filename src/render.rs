@@ -1,13 +1,11 @@
-use std::ops::{Mul, Div};
-
 use crate::bvh::{BvhNode, Bvh};
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::math::extensions::*;
-use crate::textures::texture::{Texture, self};
-use nalgebra::{Vector2, Vector3, Rotation3, SimdPartialOrd};
+use crate::textures::texture::Texture;
+use nalgebra::{Vector2, Vector3};
 use rayon::prelude::*;
 
 pub struct Render {
@@ -53,7 +51,7 @@ impl Render {
 
             //let screen_pos = Vector2::<f32>::new(x as f32 / camera.screen_width as f32, y as f32 / camera.screen_height as f32);
             // Get camera ray
-            let mut ray = camera.ray_from_screen_point(&Vector2::<f32>::new(x as f32, y as f32), &mut seed);
+            let mut ray: crate::math::ray::Ray = camera.ray_from_screen_point(&Vector2::new(x as f32, y as f32), &mut seed);
             let mut color: Vector3<f32> = Vector3::new(1.0, 1.0, 1.0);
             let mut light: Vector3<f32> = Vector3::zeros();
 
@@ -100,12 +98,7 @@ impl Render {
                     color = color.component_mul(&material.albedo);
 
                 } else {
-                    fn uv_on_sphere(dir: &Vector3<f32>) -> (f32, f32) {
-                        let u = 0.5 + f32::atan2(dir.z, dir.x) / (2.0 * std::f32::consts::PI);
-                        let v = 0.5 + dir.y.asin() / (std::f32::consts::PI);
-                        (u.max(0.0), v.max(0.0))
-                    }
-                    let uvs = uv_on_sphere(&ray.direction);
+                    let uvs = Self::uv_on_sphere(&ray.direction);
                     let sky_color = self.texture.sample(uvs.0, uvs.1);
                     light += sky_color.component_mul(&color);
                     break;
@@ -117,6 +110,13 @@ impl Render {
             *pixel = blended_color;
         });
         self.accumulated_frames += 1;
+    }
+
+    #[inline(always)]
+    fn uv_on_sphere(dir: &Vector3<f32>) -> (f32, f32) {
+        let u = 0.5 + f32::atan2(dir.z, dir.x) / (2.0 * std::f32::consts::PI);
+        let v = 0.5 + dir.y.asin() / (std::f32::consts::PI);
+        (u.max(0.0), v.max(0.0))
     }
 
     #[inline]

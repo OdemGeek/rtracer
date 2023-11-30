@@ -1,7 +1,3 @@
-use std::default;
-use nalgebra::Vector3;
-use crate::math::extensions;
-
 #[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub enum TextureSamplingMode {

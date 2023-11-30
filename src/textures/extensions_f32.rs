@@ -1,4 +1,3 @@
-use crate::math::extensions::*;
 use super::texture::{Texture, TextureSamplingMode};
 use std::path::Path;
 use nalgebra::Vector3;
