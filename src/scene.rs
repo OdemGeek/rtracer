@@ -1,5 +1,6 @@
 use std::time::Instant;
 use crate::{math::ray::Ray, entity::{hit::Hit, triangle::Triangle, Bounds}, bvh::{BvhNode, Bvh}};
+use nalgebra::Vector3;
 use rayon::prelude::*;
 
 pub struct SceneData {
@@ -28,8 +29,9 @@ impl SceneData {
         let timer = Instant::now();
         let objects_bounds: Vec<Bounds> = Self::calculate_objects_bounds(&self.objects);
         println!("Bounds generation time: {} ms", timer.elapsed().as_millis());
+        let objects_centroids: Vec<Vector3<f32>> = self.objects.iter().map(|x| (x.vertex1() + x.vertex2() + x.vertex3()) / 3.0).collect();
         let timer = Instant::now();
-        self.bvh_accel.calculate_bvh(objects_bounds);
+        self.bvh_accel.calculate_bvh(objects_bounds, objects_centroids);
         println!("BVH generation time: {} ms.\nBVH count: {}", timer.elapsed().as_millis(), self.bvh_accel.bvh_count());
     }
 

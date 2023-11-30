@@ -1,4 +1,5 @@
 use crate::bvh::{BvhNode, Bvh};
+use crate::entity::Bounds;
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
 use crate::scene::SceneData;
@@ -39,8 +40,9 @@ impl Render {
         let mut bvh = Bvh::default();
         if self.bvh_debug {
             bvhs = scene.get_bvh_by_depth(self.debug_depth).iter().map(|x| (*x).clone()).collect();
-            let bvhs_bounds = bvhs.iter().map(|x| x.into()).collect();
-            bvh.calculate_bvh(bvhs_bounds);
+            let bvhs_bounds: Vec<Bounds> = bvhs.iter().map(|x| x.into()).collect();
+            let bvhs_centroids: Vec<Vector3<f32>> = bvhs_bounds.iter().map(|x| x.centroid).collect();
+            bvh.calculate_bvh(bvhs_bounds, bvhs_centroids);
         }
         
         // Iterate over the pixels of the image

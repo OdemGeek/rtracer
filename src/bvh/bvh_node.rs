@@ -100,22 +100,6 @@ impl BvhNode {
     pub fn is_leaf(&self) -> bool {
         self.object_count > 0
     }
-
-    #[inline]
-    /// Returns (split_pos, divide_axis)
-    pub fn division_plane(aabb_min: Vector3<f32>, aabb_max: Vector3<f32>) -> (f32, u32) {
-        let x_len = aabb_max.x - aabb_min.x;
-        let y_len = aabb_max.y - aabb_min.y;
-        let z_len = aabb_max.z - aabb_min.z;
-
-        if x_len >= y_len && x_len >= z_len {
-            ((aabb_max.x + aabb_min.x) / 2.0, 0)
-        } else if y_len >= x_len && y_len >= z_len {
-            ((aabb_max.y + aabb_min.y) / 2.0, 1)
-        } else {
-            ((aabb_max.z + aabb_min.z) / 2.0, 2)
-        }
-    }
 }
 
 impl From<BvhNode> for Bounds {

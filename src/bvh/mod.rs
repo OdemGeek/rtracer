@@ -13,6 +13,7 @@ use crate::entity::Bounds;
 pub struct Bvh {
     bvhs: Vec<BvhNode>,
     objects_bounds: Vec<Bounds>,
+    objects_centroids: Vec<Vector3<f32>>,
     objects_indexes: Vec<usize>,
     nodes_used: usize
 }
@@ -23,6 +24,7 @@ impl Default for Bvh {
         Bvh {
             bvhs: vec![],
             objects_bounds: vec![],
+            objects_centroids: vec![],
             objects_indexes: vec![],
             nodes_used: 0
         }
@@ -58,12 +60,10 @@ impl Bvh {
     }
 
     #[inline]
-    pub fn calculate_bvh(&mut self, objects_bounds: Vec<Bounds>) {
+    pub fn calculate_bvh(&mut self, objects_bounds: Vec<Bounds>, objects_centroids: Vec<Vector3<f32>>) {
         self.objects_indexes = (0..objects_bounds.len()).collect();
         self.objects_bounds = objects_bounds;
-
-        // Debug code
-        
+        self.objects_centroids = objects_centroids;
 
         self.bvhs = Vec::with_capacity(self.objects_bounds.len() * 2 - 1);
         self.bvhs.resize(self.bvhs.capacity(), BvhNode::new(0, 0));
@@ -74,7 +74,6 @@ impl Bvh {
         root_bvh.first_object = 0;
         root_bvh.object_count = self.objects_bounds.len();
         self.calculate_bvh_bounds(0);
-        
 
         let mut current_index = 0;
 
@@ -104,27 +103,31 @@ impl Bvh {
 
     #[inline]
     fn calculate_childs(&mut self, bvh_index: usize) {
-        let s: Option<(Vector3<f32>, Vector3<f32>)> = self.calculate_bvh_centroids(bvh_index);
-        let bvh = &mut self.bvhs[bvh_index];
-        if bvh.object_count < 3 {
+        println!("Bvh: {}", bvh_index);
+        let bvh = &self.bvhs[bvh_index];
+        let e: Vector3<f32> = bvh.aabb_max - bvh.aabb_min; // extent of parent
+        let parent_area: f32 = e.x * e.y + e.y * e.z + e.z * e.x;
+        let parent_cost: f32 = bvh.object_count as f32 * parent_area;
+        let (split_pos, divide_axis, best_cost) = self.division_plane(bvh);
+        println!("Cost: {}, Objects count: {}", best_cost, bvh.object_count);
+        if best_cost >= parent_cost {
             return;
         }
-        let s: (Vector3<f32>, Vector3<f32>) = s.unwrap();
-        let (split_pos, divide_axis) = BvhNode::division_plane(s.0, s.1);
         // Divide
         let mut i = bvh.first_object;
         let mut j = i + bvh.object_count - 1;
         while i <= j {
-            if self.objects_bounds[i].centroid[divide_axis as usize] < split_pos {
+            if self.objects_centroids[i][divide_axis as usize] < split_pos {
                 i += 1;
             }
             else {
                 self.objects_bounds.swap(i, j);
                 self.objects_indexes.swap(i, j);
+                self.objects_centroids.swap(i, j);
                 j -= 1;
             }
         }
-
+        
         let left_count = i - bvh.first_object;
         // That's strange, if we divide in equal halfs it doesn't subdivide further
         if left_count == 0 || left_count == bvh.object_count {
@@ -139,6 +142,7 @@ impl Bvh {
         // So we don't have 2 mutable references
         let first_object = bvh.first_object;
         let object_count = bvh.object_count;
+        let bvh = &mut self.bvhs[bvh_index];
         bvh.first_object = left_node_index;
         bvh.object_count = 0;
         
@@ -149,6 +153,68 @@ impl Bvh {
         self.bvhs[right_node_index].first_object = i;
         self.bvhs[right_node_index].object_count = object_count - left_count;
         self.calculate_bvh_bounds(right_node_index);
+    }
+
+    #[inline]
+    /// Returns (split_pos, divide_axis, best_cost)
+    pub fn division_plane(&self, bvh: &BvhNode) -> (f32, i32, f32) {
+        // determine split axis using SAH
+        let mut best_axis: usize = 0;
+        let mut best_pos: f32 = 0.0;
+        let mut best_cost: f32 = 1e30;
+        for axis in 0..3 {
+            for i in 0..bvh.object_count {
+                let centroid = &self.objects_centroids[bvh.first_object + i];
+                let candidate_pos: f32 = centroid[axis];
+                let cost: f32 = self.evaluate_sah(bvh, axis, candidate_pos);
+                if cost < best_cost {
+                    best_axis = axis;
+                    best_pos = candidate_pos;
+                    best_cost = cost;
+                }
+            }
+        }
+        let axis: i32 = best_axis as i32;
+        let split_pos: f32 = best_pos;
+        (split_pos, axis, best_cost)
+
+        // Old divide in half
+        /*let x_len = aabb_max.x - aabb_min.x;
+        let y_len = aabb_max.y - aabb_min.y;
+        let z_len = aabb_max.z - aabb_min.z;
+
+        if x_len >= y_len && x_len >= z_len {
+            ((aabb_max.x + aabb_min.x) / 2.0, 0)
+        } else if y_len >= x_len && y_len >= z_len {
+            ((aabb_max.y + aabb_min.y) / 2.0, 1)
+        } else {
+            ((aabb_max.z + aabb_min.z) / 2.0, 2)
+        }*/
+    }
+
+    #[inline]
+    fn evaluate_sah(&self, bvh: &BvhNode, axis: usize, pos: f32) -> f32 {
+        // determine triangle counts and bounds for this split candidate
+        let mut left_box = Aabb::default();
+        let mut right_box = Aabb::default();
+        let mut left_count = 0;
+        let mut right_count = 0;
+        for i in 0..bvh.object_count
+        {
+            let centroid = &self.objects_centroids[bvh.first_object + i];
+            let bounds = &self.objects_bounds[bvh.first_object + i];
+            if centroid[axis] < pos {
+                left_count += 1;
+                left_box.grow(bounds.aabb_min);
+                left_box.grow(bounds.aabb_max);
+            } else {
+                right_count += 1;
+                right_box.grow(bounds.aabb_min);
+                right_box.grow(bounds.aabb_max);
+            }
+        }
+        let cost: f32 = left_count as f32 * left_box.area() + right_count as f32 * right_box.area();
+        if cost > 0.0 { cost } else { 1e30 }
     }
 
     #[inline]
@@ -171,25 +237,26 @@ impl Bvh {
         bvh.aabb_min = Vector3::new(x_min, y_min, z_min);
         bvh.aabb_max = Vector3::new(x_max, y_max, z_max);
     }
+}
 
-    #[inline]
-    fn calculate_bvh_centroids(&self, bvh_index: usize) -> Option<(Vector3<f32>, Vector3<f32>)> {
-        let bvh = &self.bvhs[bvh_index];
-        if self.objects_bounds.is_empty() || bvh.object_count == 0 {
-            return None;
-        }
-        let triangles: &[Bounds] = &self.objects_bounds[(bvh.first_object)..(bvh.first_object + bvh.object_count)];
-        let points: Vec<Vector3<f32>> = triangles.iter().map(|x| x.centroid).collect();
+struct Aabb {
+    pub bmin: Vector3<f32>,
+    pub bmax: Vector3<f32>
+}
+impl Default for Aabb {
+    fn default() -> Self {
+        Self { bmin: Vector3::new(1e30, 1e30, 1e30), bmax: Vector3::new(-1e30, -1e30, -1e30) }
+    }
+}
+impl Aabb {
+    fn grow(&mut self, p: Vector3<f32>) {
+        self.bmin = Vector3::new(self.bmin.x.min(p.x), self.bmin.y.min(p.y), self.bmin.z.min(p.z));
+        self.bmax = Vector3::new(self.bmax.x.max(p.x), self.bmax.y.max(p.y), self.bmax.z.max(p.z));
+    }
 
-        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-
-        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-
-        Some((Vector3::new(x_min, y_min, z_min), Vector3::new(x_max, y_max, z_max)))
+    fn area(&self) -> f32 { 
+        let e = self.bmax - self.bmin; // box extent
+        e.x * e.y + e.y * e.z + e.z * e.x
     }
 }
 
@@ -197,8 +264,19 @@ impl Bvh {
 mod tests {
     use nalgebra::Vector3;
     use crate::math::ray::Ray;
-    use super::BvhNode;
+    use super::{BvhNode, Aabb};
 
+    #[test]
+    fn aabb_grow() {
+        let mut aabb = Aabb::default();
+        aabb.grow(Vector3::new(-1.0, 0.0, 0.5));
+        aabb.grow(Vector3::new(1.0, 0.5, 2.0));
+        aabb.grow(Vector3::new(0.01, 0.01, 0.7));
+        aabb.grow(Vector3::new(0.1, 0.2, 0.8));
+        assert_eq!(aabb.bmin, Vector3::new(-1.0, 0.0, 0.5));
+        assert_eq!(aabb.bmax, Vector3::new(1.0, 0.5, 2.0));
+    }
+    
     #[test]
     fn bvh_intersection() {
         let mut bvh = BvhNode::new(0, 0);
