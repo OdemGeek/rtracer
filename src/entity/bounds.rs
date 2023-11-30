@@ -17,14 +17,19 @@ impl Bounds {
 #[cfg(test)]
 mod tests {
     use nalgebra::Vector3;
+    use crate::{entity::triangle::Triangle, material::Material};
+
     use super::Bounds;
 
     #[test]
     fn triangle_bounds_from_points() {
-        let triangle = Bounds::new(
+        let triangle = Bounds::from(
+            Triangle::new(
             Vector3::new(-0.5, 0.0, 0.0),
             Vector3::new(1.2, 0.0, -0.25),
-            Vector3::new(0.0, 1.0, 0.0)
+            Vector3::new(0.0, 1.0, 0.0),
+            Material::default().into()
+            )
         );
         assert_eq!(triangle.aabb_min, Vector3::new(-0.5, 0.0, -0.25));
         assert_eq!(triangle.aabb_max, Vector3::new(1.2, 1.0, 0.0));
