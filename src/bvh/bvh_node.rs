@@ -1,7 +1,7 @@
 use nalgebra::Vector3;
 use crate::{math::ray::Ray, entity::{hit::{Intersection, Hittable}, Bounds}};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct BvhNode {
     pub aabb_min: Vector3<f32>,
     pub aabb_max: Vector3<f32>,
@@ -23,28 +23,26 @@ impl BvhNode {
 
     #[inline]
     pub fn intersect(&self, ray: &Ray) -> bool {
-        let tx1 = (self.aabb_min.x - ray.origin.x) / ray.direction.x;
-        let tx2 = (self.aabb_max.x - ray.origin.x) / ray.direction.x;
+        let dirfrac = ray.get_frac_direction();
+        
+        let tx1 = (self.aabb_min.x - ray.origin.x) * dirfrac.x;
+        let tx2 = (self.aabb_max.x - ray.origin.x) * dirfrac.x;
         let mut tmin = tx1.min(tx2);
         let mut tmax = tx1.max(tx2);
-        let ty1 = (self.aabb_min.y - ray.origin.y) / ray.direction.y;
-        let ty2 = (self.aabb_max.y - ray.origin.y) / ray.direction.y;
+        let ty1 = (self.aabb_min.y - ray.origin.y) * dirfrac.y;
+        let ty2 = (self.aabb_max.y - ray.origin.y) * dirfrac.y;
         tmin = tmin.max(ty1.min(ty2));
         tmax = tmax.min(ty1.max(ty2));
-        let tz1 = (self.aabb_min.z - ray.origin.z) / ray.direction.z;
-        let tz2 = (self.aabb_max.z - ray.origin.z) / ray.direction.z;
+        let tz1 = (self.aabb_min.z - ray.origin.z) * dirfrac.z;
+        let tz2 = (self.aabb_max.z - ray.origin.z) * dirfrac.z;
         tmin = tmin.max(tz1.min(tz2));
         tmax = tmax.min(tz1.max(tz2));
         tmax >= tmin && tmax > 0.0
     }
 
     #[inline]
-    pub fn intersect_point<'a>(&'a self, ray: &Ray) -> Option<Vec<Intersection<'a, BvhNode>>> {
-        let dirfrac = Vector3::new(
-            1.0 / ray.direction.x,
-            1.0 / ray.direction.y,
-            1.0 / ray.direction.z
-        );
+    pub fn intersect_point(&self, ray: &Ray) -> Option<Intersection<BvhNode>> {
+        let dirfrac = ray.get_frac_direction();
 
         let t1 = (self.aabb_min.x - ray.origin.x) * dirfrac.x;
         let t2 = (self.aabb_max.x - ray.origin.x) * dirfrac.x;
@@ -71,16 +69,62 @@ impl BvhNode {
         }
 
         if tmin < 0.0 {
-            return Some(vec![Intersection::<'a, BvhNode>::new(tmax, self)]);
+            return Some(Intersection::<BvhNode>::new(tmax, self));
         }
 
         if tmin < 0.0 {
-            return Some(vec![Intersection::<'a, BvhNode>::new(tmax, self)]);
+            return Some(Intersection::<BvhNode>::new(tmax, self));
         }
 
         // t = tmin;
-        Some(vec![Intersection::<'a, BvhNode>::new(tmin, self), Intersection::<'a, BvhNode>::new(tmax, self)])
+        Some(Intersection::<BvhNode>::new(tmin, self))
     }
+
+    #[inline]
+    pub fn intersect_distance(&self, ray: &Ray) -> f32 {
+        let dirfrac = ray.get_frac_direction();
+
+        let t1 = (self.aabb_min.x - ray.origin.x) * dirfrac.x;
+        let t2 = (self.aabb_max.x - ray.origin.x) * dirfrac.x;
+        let t3 = (self.aabb_min.y - ray.origin.y) * dirfrac.y;
+        let t4 = (self.aabb_max.y - ray.origin.y) * dirfrac.y;
+        let t5 = (self.aabb_min.z - ray.origin.z) * dirfrac.z;
+        let t6 = (self.aabb_max.z - ray.origin.z) * dirfrac.z;
+
+        let tmin = f32::max(f32::max(f32::min(t1, t2),
+            f32::min(t3, t4)), f32::min(t5, t6));
+        let tmax = f32::min(f32::min(f32::max(t1, t2),
+            f32::max(t3, t4)), f32::max(t5, t6));
+        
+        if tmax >= tmin && tmax > 0.0 {
+            tmin
+        } else {
+            f32::INFINITY
+        }
+        // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+        /*if tmax < 0.0 {
+            // t = tmax;
+            return None;
+        }
+
+        // if tmin > tmax, ray doesn't intersect AABB
+        if tmin > tmax {
+            // t = tmax;
+            return None;
+        }
+
+        if tmin < 0.0 {
+            return Some(tmax);
+        }
+
+        if tmin < 0.0 {
+            return Some(tmax);
+        }
+
+        // t = tmin;
+        Some(tmin)*/
+    }
+
 
     #[inline]
     pub fn distance_to_edge(&self, point: &Vector3<f32>) -> f32 {
@@ -125,49 +169,12 @@ impl From<&BvhNode> for Bounds {
 }
 
 impl Hittable<BvhNode> for BvhNode {
+    #[inline]
     fn intersect(&self, ray: &Ray) -> Option<Intersection<BvhNode>> {
-        let dirfrac = Vector3::new(
-            1.0 / ray.direction.x,
-            1.0 / ray.direction.y,
-            1.0 / ray.direction.z
-        );
-
-        let t1 = (self.aabb_min.x - ray.origin.x) * dirfrac.x;
-        let t2 = (self.aabb_max.x - ray.origin.x) * dirfrac.x;
-        let t3 = (self.aabb_min.y - ray.origin.y) * dirfrac.y;
-        let t4 = (self.aabb_max.y - ray.origin.y) * dirfrac.y;
-        let t5 = (self.aabb_min.z - ray.origin.z) * dirfrac.z;
-        let t6 = (self.aabb_max.z - ray.origin.z) * dirfrac.z;
-
-        let tmin = f32::max(f32::max(f32::min(t1, t2),
-            f32::min(t3, t4)), f32::min(t5, t6));
-        let tmax = f32::min(f32::min(f32::max(t1, t2),
-            f32::max(t3, t4)), f32::max(t5, t6));
-
-        // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
-        if tmax < 0.0 {
-            // t = tmax;
-            return None;
-        }
-
-        // if tmin > tmax, ray doesn't intersect AABB
-        if tmin > tmax {
-            // t = tmax;
-            return None;
-        }
-
-        if tmin < 0.0 {
-            return Some(Intersection::<BvhNode>::new(tmax, self));
-        }
-
-        if tmin < 0.0 {
-            return Some(Intersection::<BvhNode>::new(tmax, self));
-        }
-
-        // t = tmin;
-        Some(Intersection::<BvhNode>::new(tmin, self))
+        self.intersect_point(ray)
     }
 
+    #[inline]
     fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         *ray_direction
     }

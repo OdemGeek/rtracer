@@ -253,6 +253,7 @@ fn main() {
             (p.z * 255.0) as u8
         )
     }).collect();
+    let mut debug_depth: u32 = 0;
     // Loop until the window is closed
     while window.is_open() && !window.is_key_down(Key::Escape) {
         // Record frame time
@@ -315,9 +316,10 @@ fn main() {
 
             if move_vector_scaled != Vector3::zeros() {
                 data.camera.anchor.translate_relative(Vector3::new(move_vector_scaled.x, move_vector_scaled.z, move_vector_scaled.y) * move_speed);
-                need_to_reset |= true;
+                need_to_reset = true;
             }
-    
+            
+            let mut update_debug_bvh = false;
             if window.is_key_pressed(Key::I, minifb::KeyRepeat::No) {
                 data.render.bvh_debug = !data.render.bvh_debug;
                 data.max_samples = if data.render.bvh_debug {
@@ -325,23 +327,30 @@ fn main() {
                 } else {
                     max_samples
                 };
-                need_to_reset |= true;
+                need_to_reset = true;
+                update_debug_bvh = true;
             }
             if data.render.bvh_debug {
                 if window.is_key_pressed(Key::Period, minifb::KeyRepeat::No) {
-                    data.render.debug_depth += 1;
-                    need_to_reset |= true;
+                    debug_depth += 1;
+                    need_to_reset = true;
+                    update_debug_bvh = true;
                 }
-                if window.is_key_pressed(Key::Comma, minifb::KeyRepeat::No) && data.render.debug_depth > 0 {
-                    data.render.debug_depth -= 1;
-                    need_to_reset |= true;
+                if window.is_key_pressed(Key::Comma, minifb::KeyRepeat::No) && debug_depth > 0 {
+                    debug_depth -= 1;
+                    need_to_reset = true;
+                    update_debug_bvh = true;
                 }
+            }
+
+            if update_debug_bvh {
+                data.scene_data.calculate_debug_bvh(debug_depth);
             }
 
             if window.get_mouse_down(minifb::MouseButton::Right) && mouse_delta != Vector2::zeros() {
                 let rotation = data.camera.anchor.rotation();
                 data.camera.anchor.set_rotation(Vector3::new(mouse_delta.y * 0.002, mouse_delta.x * 0.002, 0.0) + rotation);
-                need_to_reset |= true;
+                need_to_reset = true;
             }
             data.camera.init();
             // Reset frames

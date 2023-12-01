@@ -85,7 +85,7 @@ impl Hittable<Triangle> for Triangle {
         const EPSILON: f32 = 0.0000001;
         let edge1 = self.vertex2 - self.vertex1;
         let edge2 = self.vertex3 - self.vertex1;
-        let h = ray.direction.cross(&edge2);
+        let h = ray.get_direction().cross(&edge2);
         let a = edge1.dot(&h);
         
         // Without this check render is faster
@@ -108,7 +108,7 @@ impl Hittable<Triangle> for Triangle {
             return None;
         }
 
-        let v = f * ray.direction.dot(&q);
+        let v = f * ray.get_direction().dot(&q);
         if v < 0.0 || u + v > 1.0 {
             return None;
         }

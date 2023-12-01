@@ -35,16 +35,16 @@ impl Bvh {
     #[inline]
     pub fn intersect<'a, T>(&'a self, ray: &Ray, objects: &'a [T]) -> Option<Hit<T>>
     where T: Hittable<T> {
+        let ray = ray.clone();
         // Get closest hit
-        let mut bvh_intersection = BvhIntersection::new(self);
-        bvh_intersection.intersect_hierarchy(ray, objects);
-
-        bvh_intersection.closest_hit.map(move |hit| Hit::new(
-            hit.t,
-            ray.origin + ray.direction * hit.t,
-            hit.object.normal(&ray.direction),
-            hit.object
-        ))
+        let mut bvh_intersection = BvhIntersection::new(self, &ray, objects);
+        bvh_intersection.intersect_hierarchy();
+        bvh_intersection.closest_hit.map(|hit| Hit::<'a, T> {
+            t: hit.t,
+            point: ray.origin + ray.get_direction() * hit.t,
+            normal: hit.object.normal(ray.get_direction()),
+            object: hit.object
+        })
     }
 
     #[inline]
@@ -145,6 +145,8 @@ impl Bvh {
         let mut best_pos: f32 = 0.0;
         let mut best_cost: f32 = 1e30;
         for axis in 0..3 {
+            
+            // Calculate bounds by centroids of objects in this node
             let mut bounds_min: f32 = 1e30;
             let mut bounds_max: f32 = -1e30;
             for i in 0..bvh.object_count {
@@ -165,6 +167,64 @@ impl Bvh {
                     best_cost = cost;
                 }
             }
+            // Bins implementation (don't work)
+            /*
+            const BINS: usize = 8;
+            // Calculate bounds by centroids of objects in this node
+            let mut bounds_min: f32 = 1e30;
+            let mut bounds_max: f32 = -1e30;
+            for i in 0..bvh.object_count {
+                let centroid = &self.objects_centroids[bvh.first_object + i];
+                bounds_min = bounds_min.min(centroid[axis]);
+                bounds_max = bounds_max.max(centroid[axis]);
+            }
+            if bounds_min == bounds_max {
+                continue;
+            }
+            // populate the bins
+            let mut bins: [Bin; BINS] = [Bin::default(); BINS];
+            let mut scale: f32 = BINS as f32 / (bounds_max - bounds_min);
+            for i in 0..bvh.object_count {
+                let centroid = &self.objects_centroids[bvh.first_object + i];
+                let bounds = &self.objects_bounds[bvh.first_object + i];
+                let bin_ind: usize = usize::min(BINS - 1, ((centroid[axis] - bounds_min) * scale) as usize);
+                bins[bin_ind].object_count += 1;
+                bins[bin_ind].aabb.grow(bounds.aabb_min);
+                bins[bin_ind].aabb.grow(bounds.aabb_max);
+            }
+            // gather data for the (BINS count - 1) planes between the (BINS count) bins
+            let mut left_area: [f32; BINS - 1] = [0.0; BINS - 1];
+            let mut right_area: [f32; BINS - 1] = [0.0; BINS - 1];
+            let mut left_count: [usize; BINS - 1] = [0; BINS - 1];
+            let mut right_count: [usize; BINS - 1] = [0; BINS - 1];
+            let mut left_box: Aabb = Aabb::default();
+            let mut right_box: Aabb = Aabb::default();
+            let mut left_sum = 0;
+            let mut right_sum = 0;
+
+            for i in 0..BINS - 1 {
+                left_sum += bins[i].object_count;
+                left_count[i] = left_sum;
+                left_box.grow(bins[i].aabb.bmin);
+                left_box.grow(bins[i].aabb.bmax);
+                left_area[i] = left_box.area();
+
+                right_sum += bins[BINS - 1 - i].object_count;
+                right_count[BINS - 2 - i] = right_sum;
+                right_box.grow(bins[BINS - 1 - i].aabb.bmin);
+                right_box.grow(bins[BINS - 1 - i].aabb.bmax);
+                right_area[BINS - 2 - i] = right_box.area();
+            }
+            // calculate SAH cost for the (BINS count) planes
+            scale = (bounds_max - bounds_min) / BINS as f32;
+            for i in 0..BINS - 1 {
+                let plane_cost: f32 = left_count[i] as f32 * left_area[i] + right_count[i] as f32 * right_area[i];
+                if plane_cost < best_cost {
+                    best_axis = axis;
+                    best_pos = bounds_min + scale * (i + 1) as f32;
+                    best_cost = plane_cost;
+                }
+            }*/
         }
         let axis: i32 = best_axis as i32;
         let split_pos: f32 = best_pos;
@@ -202,27 +262,33 @@ impl Bvh {
         if self.objects_bounds.is_empty() || bvh.object_count == 0 {
             return;
         }
-        let triangles: &[Bounds] = &self.objects_bounds[(bvh.first_object)..(bvh.first_object + bvh.object_count)];
-        let points: Vec<Vector3<f32>> = triangles.iter().flat_map(|x| [x.aabb_min, x.aabb_max]).collect();
+        let objects: &[Bounds] = &self.objects_bounds[(bvh.first_object)..(bvh.first_object + bvh.object_count)];
+        let points: Vec<Vector3<f32>> = objects.iter().flat_map(|x| [x.aabb_min, x.aabb_max]).collect();
 
-        let x_min = points.iter().map(|x: &Vector3<f32>| x.x).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_min = points.iter().map(|x: &Vector3<f32>| x.y).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_min = points.iter().map(|x: &Vector3<f32>| x.z).min_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+        let mut min: Vector3<f32> = Vector3::new(f32::INFINITY, f32::INFINITY, f32::INFINITY);
+        let mut max: Vector3<f32> = Vector3::new(-f32::INFINITY, -f32::INFINITY, -f32::INFINITY);
+        points.iter().for_each(|x: &Vector3<f32>| {
+            min.x = min.x.min(x.x);
+            min.y = min.y.min(x.y);
+            min.z = min.z.min(x.z);
 
-        let x_max = points.iter().map(|x: &Vector3<f32>| x.x).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let y_max = points.iter().map(|x: &Vector3<f32>| x.y).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
-        let z_max = points.iter().map(|x: &Vector3<f32>| x.z).max_by(|x, y| x.partial_cmp(y).unwrap()).unwrap();
+            max.x = max.x.max(x.x);
+            max.y = max.y.max(x.y);
+            max.z = max.z.max(x.z);
+        });
 
-        bvh.aabb_min = Vector3::new(x_min, y_min, z_min);
-        bvh.aabb_max = Vector3::new(x_max, y_max, z_max);
+        bvh.aabb_min = min;
+        bvh.aabb_max = max;
     }
 }
 
+/*#[derive(Default, Clone)]
 struct Bin {
     pub aabb: Aabb,
     pub object_count: usize
-}
+}*/
 
+#[derive(Clone)]
 struct Aabb {
     pub bmin: Vector3<f32>,
     pub bmax: Vector3<f32>

@@ -5,7 +5,9 @@ use rayon::prelude::*;
 
 pub struct SceneData {
     pub objects: Vec<Triangle>,
-    bvh_accel: Bvh
+    bvh_accel: Bvh,
+    pub debug_objects: Vec<BvhNode>,
+    bvh_debug: Bvh
 }
 
 impl SceneData {
@@ -13,7 +15,9 @@ impl SceneData {
     pub fn new(objects: Vec<Triangle>) -> Self {
         SceneData {
             objects,
-            bvh_accel: Bvh::default()
+            bvh_accel: Bvh::default(),
+            debug_objects: vec![],
+            bvh_debug: Bvh::default(),
         }
     }
 
@@ -36,6 +40,14 @@ impl SceneData {
     }
 
     #[inline]
+    pub fn calculate_debug_bvh(&mut self, debug_depth: u32) {
+        self.debug_objects = self.get_bvh_by_depth(debug_depth).iter().map(|x| (*x).clone()).collect();
+        let bvhs_bounds: Vec<Bounds> = self.debug_objects.iter().map(|x| x.into()).collect();
+        let bvhs_centroids: Vec<Vector3<f32>> = bvhs_bounds.iter().map(|x| x.centroid).collect();
+        self.bvh_debug.calculate_bvh(bvhs_bounds, bvhs_centroids);
+    }
+
+    #[inline]
     fn calculate_objects_bounds(objects: &[Triangle]) -> Vec<Bounds> {
         objects.par_iter().map(
             |x| x.into()
@@ -43,8 +55,13 @@ impl SceneData {
     }
 
     #[inline]
-    pub fn cast_ray(&self, ray: &Ray) -> Option<Hit<Triangle>> {
+    pub fn cast_ray<'a>(&'a self, ray: &'a Ray) -> Option<Hit<Triangle>> {
         self.bvh_accel.intersect(ray, &self.objects)
+    }
+
+    #[inline]
+    pub fn cast_debug_ray<'a>(&'a self, ray: &'a Ray) -> Option<Hit<BvhNode>> {
+        self.bvh_debug.intersect(ray, &self.debug_objects)
     }
 
     #[inline]
