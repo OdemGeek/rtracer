@@ -63,8 +63,7 @@ impl Render {
                 let blended_color = lerp_vector3(pixel, &color, weight);
                 *pixel = blended_color;
             });
-        }
-        else {
+        } else {
             // Iterate over the pixels of the image
             self.texture_buffer.par_iter_mut().enumerate().for_each(|(i, pixel)| {
                 let x = i % camera.screen_width as usize;
@@ -80,17 +79,18 @@ impl Render {
                 const MAX_BOUNCES: u32 = 3;
                 for _ in 0..MAX_BOUNCES {
                     // Calculate intersection
-                    seed = pcg::hash(seed);
                     let t_ray = ray.clone();
                     let hit_option = scene.cast_ray(&t_ray);
                     // Calculate fragment
                     if let Some(hit) = hit_option {
                         let material = &hit.object.material;
+
                         let bar_coords: Vector2<f32> = hit.object.bar_coords(&hit.point);
                         let uv_coors: Vector2<f32> = hit.object.uv_coords(&bar_coords);
                         let normal: Vector3<f32> = hit.object.normal(&bar_coords, ray.get_direction());
+
                         let albedo_color: Vector3<f32> = if let Some(albedo_tex) = &material.albedo_tex {
-                            albedo_tex.sample(uv_coors.x, uv_coors.y).component_mul(&material.albedo)
+                            f32_vector3_from_u32(albedo_tex.sample(uv_coors.x, uv_coors.y)).component_mul(&material.albedo)
                         } else {
                             material.albedo
                         };
@@ -107,7 +107,6 @@ impl Render {
                         let uvs = Self::uv_on_sphere(ray.get_direction());
                         let sky_color = self.texture.sample(-uvs.0, uvs.1);
                         light += sky_color.component_mul(&color);
-                        //light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
                         break;
                     }
                 }

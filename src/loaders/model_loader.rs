@@ -6,7 +6,7 @@ use std::{fs::File, collections::HashMap, sync::Arc};
 use std::io::BufReader;
 use crate::material::Material;
 use crate::entity::triangle::Triangle;
-use crate::textures::extensions_f32::file_to_texture;
+use crate::textures::extensions::file_to_texture;
 use crate::textures::texture::TextureSamplingMode;
 
 #[inline]
