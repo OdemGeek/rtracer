@@ -1,5 +1,4 @@
-use crate::bvh::{BvhNode, Bvh};
-use crate::entity::Bounds;
+use crate::bvh::BvhNode;
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
 use crate::scene::SceneData;
@@ -87,7 +86,6 @@ impl Render {
                     // Calculate fragment
                     if let Some(hit) = hit_option {
                         let material = &hit.object.material;
-
                         ray.origin = hit.point + hit.normal * 0.001;
                         let reflection: Vector3<f32> = reflect(ray.get_direction(), &hit.normal);
                         let diffuse: Vector3<f32> = (hit.normal + random_direction(&mut seed)).normalize();
@@ -98,10 +96,10 @@ impl Render {
                         color = color.component_mul(&material.albedo);
 
                     } else {
-                        //let uvs = Self::uv_on_sphere(&ray.direction);
-                        //let sky_color = self.texture.sample(uvs.0, uvs.1);
-                        //light += sky_color.component_mul(&color);
-                        light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
+                        let uvs = Self::uv_on_sphere(ray.get_direction());
+                        let sky_color = self.texture.sample(uvs.0, uvs.1);
+                        light += sky_color.component_mul(&color);
+                        //light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
                         break;
                     }
                 }

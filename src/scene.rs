@@ -41,7 +41,7 @@ impl SceneData {
 
     #[inline]
     pub fn calculate_debug_bvh(&mut self, debug_depth: u32) {
-        self.debug_objects = self.get_bvh_by_depth(debug_depth).iter().map(|x| (*x).clone()).collect();
+        self.debug_objects = self.get_bvh_by_depth(debug_depth);
         let bvhs_bounds: Vec<Bounds> = self.debug_objects.iter().map(|x| x.into()).collect();
         let bvhs_centroids: Vec<Vector3<f32>> = bvhs_bounds.iter().map(|x| x.centroid).collect();
         self.bvh_debug.calculate_bvh(bvhs_bounds, bvhs_centroids);
@@ -65,7 +65,7 @@ impl SceneData {
     }
 
     #[inline]
-    pub fn get_bvh_by_depth(&self, depth: u32) -> Vec<&BvhNode> {
+    pub fn get_bvh_by_depth(&self, depth: u32) -> Vec<BvhNode> {
         self.bvh_accel.get_bvh_by_depth(depth)
     }
 }

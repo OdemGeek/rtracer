@@ -3,7 +3,7 @@ use super::BvhNode;
 pub struct BvhDepth<'a> {
     pub data: &'a [BvhNode],
     pub depth: u32,
-    pub bvhs: Vec<&'a BvhNode>
+    pub bvhs: Vec<BvhNode>
 }
 
 impl BvhDepth<'_> {
@@ -25,7 +25,7 @@ impl BvhDepth<'_> {
             return;
         }
         if depth == self.depth {
-            self.bvhs.push(bvh);
+            self.bvhs.push(bvh.clone());
         } else if !bvh.is_leaf() {
             self.intersect_bvh(bvh.first_object, depth + 1);
             self.intersect_bvh(bvh.first_object + 1, depth + 1);

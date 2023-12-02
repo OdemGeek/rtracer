@@ -53,7 +53,7 @@ impl Bvh {
     }
 
     #[inline]
-    pub fn get_bvh_by_depth(&self, depth: u32) -> Vec<&BvhNode> {
+    pub fn get_bvh_by_depth(&self, depth: u32) -> Vec<BvhNode> {
         let mut bd = BvhDepth::new(&self.bvhs, depth);
         bd.intersect_hierarchy();
         bd.bvhs

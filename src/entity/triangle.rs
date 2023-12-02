@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use nalgebra::Vector3;
+use nalgebra::{Vector3, Vector2};
 use crate::{math::{ray::Ray, pcg}, material::Material, entity::hit::Intersection};
 
 use super::{hit::Hittable, Bounds};
@@ -41,27 +41,54 @@ impl Triangle {
         self.vertex3
     }
 
-    
+    #[inline]
+    /// Barycentric coordinates
+    pub fn bar_coords(&self, hit_point: &Vector3<f32>) -> Vector2<f32> {
+        let v0v1: Vector3<f32> = self.vertex2 - self.vertex1;
+        let v0v2: Vector3<f32> = self.vertex3 - self.vertex1;
+        let n: Vector3<f32> = v0v1.cross(&v0v2);
+        let denom = n.dot(&n);
+
+        let mut c: Vector3<f32>;
+
+        let edge1: Vector3<f32> = self.vertex3 - self.vertex2;
+        let vp1: Vector3<f32> = hit_point - self.vertex2;
+        c = edge1.cross(&vp1);
+        let mut u = n.dot(&c);
+
+        let edge2: Vector3<f32> = self.vertex1 - self.vertex3;
+        let vp2: Vector3<f32> = hit_point - self.vertex3;
+        c = edge2.cross(&vp2);
+        let mut v = n.dot(&c);
+
+        u /= denom;
+        v /= denom;
+
+        Vector2::new(u, v)
+    }
+
+    #[inline]
+    pub fn vertex_color(&self, bar_coords: Vector2<f32>) -> Vector3<f32> {
+        let c0: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
+        let c1: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
+        let c2: Vector3<f32> = Vector3::new(0.0, 0.0, 1.0);
+
+        bar_coords.x * c0 + bar_coords.y * c1 + (1.0 - bar_coords.x - bar_coords.y) * c2
+    }
     
     #[inline]
-    pub fn plane_normal(&self) -> Vector3<f32> {
-        // Calculate the normal vector of the triangle (cross product of two sides)
-        let v1 = Vector3::new(
-            self.vertex2.x - self.vertex1.x,
-            self.vertex2.y - self.vertex1.y,
-            self.vertex2.z - self.vertex1.z,
-        );
-        let v2 = Vector3::new(
-            self.vertex3.x - self.vertex1.x,
-            self.vertex3.y - self.vertex1.y,
-            self.vertex3.z - self.vertex1.z,
-        );
+    pub fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
+        let direction = self.normal.dot(ray_direction);
+        let is_flipped = if direction > 0.0 {-1.0} else {1.0};
+        self.normal * is_flipped
+    }
 
-        Vector3::new(
-            v1.y * v2.z - v1.z * v2.y,
-            v1.z * v2.x - v1.x * v2.z,
-            v1.x * v2.y - v1.y * v2.x,
-        ).normalize()
+    #[inline]
+    pub fn plane_normal(&self) -> Vector3<f32> {
+        // Calculate the normal vector of the triangle (cross product of two edges)
+        let v1: Vector3<f32> = self.vertex2 - self.vertex1;
+        let v2: Vector3<f32> = self.vertex3 - self.vertex1;
+        v1.cross(&v2).normalize()
     }
 
     #[inline]
@@ -119,9 +146,7 @@ impl Hittable<Triangle> for Triangle {
 
     #[inline]
     fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
-        let direction = self.normal.dot(ray_direction);
-        let is_flipped = if direction > 0.0 {-1.0} else {1.0};
-        self.normal * is_flipped
+        self.normal(ray_direction)
     }
 }
 
