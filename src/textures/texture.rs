@@ -1,7 +1,7 @@
 #[allow(dead_code)]
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum TextureSamplingMode {
-    Repeat,
+    #[default] Repeat,
     Clamp,
     // TODO:
     //Mirror,
@@ -9,6 +9,7 @@ pub enum TextureSamplingMode {
 }
 
 #[allow(dead_code)]
+#[derive(Debug, Default)]
 pub struct Texture<T>
 where
     T: Default,
@@ -48,12 +49,12 @@ where
 
     #[inline]
     pub fn sample(&self, x: f32, y: f32) -> T {
-        let mut x = 1.0 - x;
+        let mut x = x;
         let mut y = 1.0 - y;
         match self.sampling_mode {
             TextureSamplingMode::Repeat => {
-                x %= 1.0;
-                y %= 1.0;
+                x = x.rem_euclid(1.0);
+                y = y.rem_euclid(1.0);
             },
             TextureSamplingMode::Clamp => {
                 x = x.clamp(0.0, 1.0);

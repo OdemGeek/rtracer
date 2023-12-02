@@ -6,14 +6,13 @@ use crate::math::ray::Ray;
 pub struct Hit<'a, T> {
     pub t: f32,
     pub point: Vector3<f32>,
-    pub normal: Vector3<f32>,
     pub object: &'a T,
 }
 
 impl<'a, T> Hit<'a, T> {
     #[inline]
-    pub fn new(t: f32, point: Vector3<f32>, normal: Vector3<f32>, object: &'a T) -> Self {
-        Hit { t, point, normal, object }
+    pub fn new(t: f32, point: Vector3<f32>, object: &'a T) -> Self {
+        Hit { t, point, object }
     }
 }
 
@@ -32,7 +31,6 @@ impl<'a, T> Intersection<'a, T> {
 
 pub trait Hittable<T>{
     fn intersect(&self, ray: &Ray) -> Option<Intersection<T>>;
-    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32>;
     // distance to plane from point = n * (a - p)
     // Where n - plane normal, p - plane pos, a - point pos
     // Do this for all three points to get info about the triangle for an example

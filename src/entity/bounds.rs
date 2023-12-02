@@ -16,7 +16,7 @@ impl Bounds {
 
 #[cfg(test)]
 mod tests {
-    use nalgebra::Vector3;
+    use nalgebra::{Vector3, Vector2};
     use crate::{entity::triangle::Triangle, material::Material};
 
     use super::Bounds;
@@ -28,6 +28,12 @@ mod tests {
             Vector3::new(-0.5, 0.0, 0.0),
             Vector3::new(1.2, 0.0, -0.25),
             Vector3::new(0.0, 1.0, 0.0),
+            Vector3::zeros(),
+            Vector3::zeros(),
+            Vector3::zeros(),
+            Vector2::zeros(),
+            Vector2::zeros(),
+            Vector2::zeros(),
             Material::default().into()
             )
         );

@@ -86,18 +86,26 @@ impl Render {
                     // Calculate fragment
                     if let Some(hit) = hit_option {
                         let material = &hit.object.material;
-                        ray.origin = hit.point + hit.normal * 0.001;
-                        let reflection: Vector3<f32> = reflect(ray.get_direction(), &hit.normal);
-                        let diffuse: Vector3<f32> = (hit.normal + random_direction(&mut seed)).normalize();
+                        let bar_coords: Vector2<f32> = hit.object.bar_coords(&hit.point);
+                        let uv_coors: Vector2<f32> = hit.object.uv_coords(&bar_coords);
+                        let normal: Vector3<f32> = hit.object.normal(&bar_coords, ray.get_direction());
+                        let albedo_color: Vector3<f32> = if let Some(albedo_tex) = &material.albedo_tex {
+                            albedo_tex.sample(uv_coors.x, uv_coors.y).component_mul(&material.albedo)
+                        } else {
+                            material.albedo
+                        };
+
+                        ray.origin = hit.point + normal * 0.001;
+                        let reflection: Vector3<f32> = reflect(ray.get_direction(), &normal);
+                        let diffuse: Vector3<f32> = (normal + random_direction(&mut seed)).normalize();
 
                         ray.set_direction(&lerp_vector3(&reflection, &diffuse, material.roughness).normalize());
                         
                         light += material.emission.component_mul(&color);
-                        color = color.component_mul(&material.albedo);
-
+                        color = color.component_mul(&albedo_color);
                     } else {
                         let uvs = Self::uv_on_sphere(ray.get_direction());
-                        let sky_color = self.texture.sample(uvs.0, uvs.1);
+                        let sky_color = self.texture.sample(-uvs.0, uvs.1);
                         light += sky_color.component_mul(&color);
                         //light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
                         break;

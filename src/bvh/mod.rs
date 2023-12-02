@@ -42,7 +42,6 @@ impl Bvh {
         bvh_intersection.closest_hit.map(|hit| Hit::<'a, T> {
             t: hit.t,
             point: ray.origin + ray.get_direction() * hit.t,
-            normal: hit.object.normal(ray.get_direction()),
             object: hit.object
         })
     }

@@ -10,16 +10,30 @@ pub struct Triangle {
     vertex1: Vector3<f32>,
     vertex2: Vector3<f32>,
     vertex3: Vector3<f32>,
+    norm1: Vector3<f32>,
+    norm2: Vector3<f32>,
+    norm3: Vector3<f32>,
+    uv1: Vector2<f32>,
+    uv2: Vector2<f32>,
+    uv3: Vector2<f32>,
     normal: Vector3<f32>,
     pub material: Arc<Material>,
 }
 
 #[allow(dead_code)]
 impl Triangle {
+    #[allow(clippy::too_many_arguments)]
     #[inline]
-    pub fn new(vertex1: Vector3<f32>, vertex2: Vector3<f32>, vertex3: Vector3<f32>, material: Arc<Material>) -> Self {
+    pub fn new(vertex1: Vector3<f32>, vertex2: Vector3<f32>, vertex3: Vector3<f32>,
+        norm1: Vector3<f32>, norm2: Vector3<f32>, norm3: Vector3<f32>,
+        uv1: Vector2<f32>, uv2: Vector2<f32>, uv3: Vector2<f32>,
+        material: Arc<Material>) -> Self
+        {
         let mut x = Triangle {
-            vertex1, vertex2, vertex3, material,
+            vertex1, vertex2, vertex3,
+            norm1, norm2, norm3,
+            uv1, uv2, uv3,
+            material,
             normal: Vector3::zeros(),
         };
         x.normal = x.plane_normal();
@@ -68,19 +82,25 @@ impl Triangle {
     }
 
     #[inline]
-    pub fn vertex_color(&self, bar_coords: Vector2<f32>) -> Vector3<f32> {
-        let c0: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
-        let c1: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
-        let c2: Vector3<f32> = Vector3::new(0.0, 0.0, 1.0);
+    pub fn vertex_color(&self, bar_coords: &Vector2<f32>) -> Vector3<f32> {
+        let c1: Vector3<f32> = Vector3::new(1.0, 0.0, 0.0);
+        let c2: Vector3<f32> = Vector3::new(0.0, 1.0, 0.0);
+        let c3: Vector3<f32> = Vector3::new(0.0, 0.0, 1.0);
 
-        bar_coords.x * c0 + bar_coords.y * c1 + (1.0 - bar_coords.x - bar_coords.y) * c2
+        bar_coords.x * c1 + bar_coords.y * c2 + (1.0 - bar_coords.x - bar_coords.y) * c3
+    }
+
+    #[inline]
+    pub fn uv_coords(&self, bar_coords: &Vector2<f32>) -> Vector2<f32> {
+        bar_coords.x * self.uv1 + bar_coords.y * self.uv2 + (1.0 - bar_coords.x - bar_coords.y) * self.uv3
     }
     
     #[inline]
-    pub fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
+    pub fn normal(&self, bar_coords: &Vector2<f32>, ray_direction: &Vector3<f32>) -> Vector3<f32> {
         let direction = self.normal.dot(ray_direction);
         let is_flipped = if direction > 0.0 {-1.0} else {1.0};
-        self.normal * is_flipped
+
+        (bar_coords.x * self.norm1 + bar_coords.y * self.norm2 + (1.0 - bar_coords.x - bar_coords.y) * self.norm3) * is_flipped
     }
 
     #[inline]
@@ -142,11 +162,6 @@ impl Hittable<Triangle> for Triangle {
         // If everything passed - we hit
         Some(Intersection::new(t, self))
         
-    }
-
-    #[inline]
-    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
-        self.normal(ray_direction)
     }
 }
 

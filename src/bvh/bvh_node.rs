@@ -173,9 +173,4 @@ impl Hittable<BvhNode> for BvhNode {
     fn intersect(&self, ray: &Ray) -> Option<Intersection<BvhNode>> {
         self.intersect_point(ray)
     }
-
-    #[inline]
-    fn normal(&self, ray_direction: &Vector3<f32>) -> Vector3<f32> {
-        *ray_direction
-    }
 }

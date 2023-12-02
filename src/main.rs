@@ -1,4 +1,4 @@
-use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}};
+use std::{env, time::{Instant, Duration}, sync::{Arc, Mutex, Condvar, atomic::AtomicBool}, path::Path};
 use std::thread;
 use std::sync::atomic::Ordering;
 use rtracer::math::extensions::u32_from_u8_rgb;
@@ -142,7 +142,6 @@ fn main() {
         };
     }
 
-
     // Create scene
     let (loaded_geometry, mut camera) = load_scene("scene.rts");
     let mut scene_data = SceneData::new(loaded_geometry);
@@ -151,10 +150,9 @@ fn main() {
     scene_data.calculate_bvh();
 
     // Load skybox image
-    let skybox_texture = file_to_texture("sunset_in_the_chalk_quarry_4k.exr", TextureSamplingMode::Clamp);
+    let skybox_texture = file_to_texture(Path::new("sunset_in_the_chalk_quarry_4k.exr"), TextureSamplingMode::Repeat);
     println!("Sky width: {}", skybox_texture.width());
     println!("Sky height: {}", skybox_texture.height());
-
     // Setup camera
     camera.screen_width = imgx as u16;
     camera.screen_height = imgy as u16;

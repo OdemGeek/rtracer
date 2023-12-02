@@ -4,8 +4,9 @@ use nalgebra::Vector3;
 
 #[allow(dead_code)]
 #[inline]
-fn load_image(path: &str) -> image::DynamicImage {
-    image::open(Path::new(path)).expect("Failed to load image")
+fn load_image(path: &Path) -> image::DynamicImage {
+    println!("Loading image at {}", path.to_str().unwrap_or(""));
+    image::open(path).expect("Failed to load image")
 }
 
 #[allow(dead_code)]
@@ -30,7 +31,7 @@ pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSampli
 
 #[allow(dead_code)]
 #[inline]
-pub fn file_to_texture(path: &str, sampling_mode: TextureSamplingMode) -> Texture<Vector3<f32>> {
+pub fn file_to_texture(path: &Path, sampling_mode: TextureSamplingMode) -> Texture<Vector3<f32>> {
     let image = load_image(path);
 
     image_to_texture(image, sampling_mode)
