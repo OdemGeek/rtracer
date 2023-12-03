@@ -69,7 +69,7 @@ impl Render {
             self.texture_buffer.par_iter_mut().enumerate().for_each(|(i, pixel)| {
                 let x = i % camera.screen_width as usize;
                 let y = camera.screen_height as usize - i / camera.screen_width as usize;
-                let mut seed = self.seed.wrapping_mul(x as u32).wrapping_mul(y as u32);
+                let mut seed = self.seed.wrapping_add(y as u32).wrapping_mul(x as u32).wrapping_add(x as u32).wrapping_mul(y as u32);
 
                 //let screen_pos = Vector2::<f32>::new(x as f32 / camera.screen_width as f32, y as f32 / camera.screen_height as f32);
                 // Get camera ray
@@ -79,6 +79,10 @@ impl Render {
 
                 const MAX_BOUNCES: u32 = 3;
                 for bounce_index in 0..MAX_BOUNCES {
+                    // Stop when color is black
+                    if color.x.max(color.y.max(color.z)) < f32::EPSILON {
+                        break;
+                    }
                     // Calculate intersection
                     let t_ray = ray.clone();
                     let ray_direction = *ray.get_direction();
