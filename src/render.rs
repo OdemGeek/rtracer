@@ -1,6 +1,4 @@
-use crate::bvh::BvhNode;
-use crate::entity::hit::Intersection;
-use crate::math::pcg::{self, random_direction, random_vector3};
+use crate::math::pcg::{self, random_direction, random_vector3, random_f32};
 use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
@@ -35,30 +33,32 @@ impl Render {
         self.seed = pcg::hash(self.seed);
         
         if self.bvh_debug {
-
             // Iterate over the pixels of the image
             self.texture_buffer.par_iter_mut().enumerate().for_each(|(i, pixel)| {
                 let x = i % camera.screen_width as usize;
                 let y = camera.screen_height as usize - i / camera.screen_width as usize;
                 let mut seed = self.seed.wrapping_mul(x as u32).wrapping_mul(y as u32);
-
+                
                 // Get camera ray
-                let ray: crate::math::ray::Ray = camera.ray_from_screen_point(&Vector2::new(x as f32, y as f32), &mut seed);
+                let mut ray: Ray = camera.ray_from_screen_point(&Vector2::new(x as f32, y as f32), &mut seed);
                 let mut color: Vector3<f32> = Vector3::new(0.005, 0.005, 0.005);
 
-                let hit = scene.cast_debug_ray(&ray);
-                let mut hits: Vec<Intersection<BvhNode>> = vec![];
-                if let Some(hit) = hit {
-                    hits.push(Intersection::new(hit.t, hit.object));
-                }
-                
-                for hit in hits {
-                    let mut bvh_color: Vector3<f32> = random_vector3(&mut ((hit.object.first_object + hit.object.object_count) as u32));
-                    let hit_point = ray.origin + ray.get_direction() * hit.t;
-                    let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 15.0).clamp(0.0, 1.0);
-                    let edge_color = Vector3::new(0.9, 0.9, 0.9);
-                    bvh_color = lerp_vector3(&edge_color, &bvh_color, distance_to_edge.clamp(0.0, 1.0));
-                    color = lerp_vector3(&color, &bvh_color, 0.3);
+                const TRANSMISSION_BOUNCES: u32 = 16;
+                for _ in 0..TRANSMISSION_BOUNCES {
+                    let scene_hit = scene.cast_debug_ray(&ray);
+                    if let Some(hit) = scene_hit {
+                        let hit_point = ray.origin + ray.get_direction() * hit.t;
+
+                        let mut bvh_color: Vector3<f32> = random_vector3(&mut ((hit.object.first_object + hit.object.object_count) as u32));
+                        let distance_to_edge = (hit.object.distance_to_edge(&hit_point) * 15.0).clamp(0.0, 1.0);
+                        let edge_color = Vector3::new(0.9, 0.9, 0.9);
+                        bvh_color = lerp_vector3(&edge_color, &bvh_color, distance_to_edge.clamp(0.0, 1.0));
+
+                        ray.origin = hit.point + ray.get_direction() * 0.001;
+                        color = lerp_vector3(&color, &bvh_color, 0.25);
+                    } else {
+                        break;
+                    }
                 }
 
                 let blended_color = lerp_vector3(pixel, &color, weight);
