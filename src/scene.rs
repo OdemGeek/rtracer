@@ -5,6 +5,7 @@ use rayon::prelude::*;
 
 pub struct SceneData {
     pub objects: Vec<Triangle>,
+    pub light_objects: Vec<usize>,
     bvh_accel: Bvh,
     pub debug_objects: Vec<BvhNode>,
     bvh_debug: Bvh
@@ -13,8 +14,17 @@ pub struct SceneData {
 impl SceneData {
     #[inline]
     pub fn new(objects: Vec<Triangle>) -> Self {
+        // Take indexes of all triangles with emission
+        let light_objects: Vec<usize> = objects.iter().enumerate().filter_map(|x| {
+            if x.1.material.emission != Vector3::zeros() {
+                Some(x.0)
+            } else {
+                None
+            }
+        }).collect();
         SceneData {
             objects,
+            light_objects,
             bvh_accel: Bvh::default(),
             debug_objects: vec![],
             bvh_debug: Bvh::default(),

@@ -1,12 +1,12 @@
 use super::texture::{Texture, TextureSamplingMode};
 use std::path::Path;
+use image::ImageResult;
 use nalgebra::Vector3;
 
 #[allow(dead_code)]
 #[inline]
-fn load_image(path: &Path) -> image::DynamicImage {
-    println!("Loading image at {}", path.to_str().unwrap_or(""));
-    image::open(path).expect("Failed to load image")
+fn load_image(path: &Path) -> ImageResult<image::DynamicImage> {
+    image::open(path)
 }
 
 #[allow(dead_code)]
@@ -31,8 +31,17 @@ pub fn image_to_texture(image: image::DynamicImage, sampling_mode: TextureSampli
 
 #[allow(dead_code)]
 #[inline]
-pub fn file_to_texture(path: &Path, sampling_mode: TextureSamplingMode) -> Texture<Vector3<f32>> {
+pub fn file_to_texture(path: &Path, sampling_mode: TextureSamplingMode) -> Option<Texture<Vector3<f32>>> {
     let image = load_image(path);
-
-    image_to_texture(image, sampling_mode)
+    match image {
+        Ok(x) => {
+            let tex = image_to_texture(x, sampling_mode);
+            println!("Loaded image \"{}\". Width: {}, Height: {}", path.to_str().unwrap_or(""), tex.width(), tex.height());
+            Some(tex)
+        },
+        Err(..) => {
+            println!("Failed to load texture \"{}\"", path.to_str().unwrap_or(""));
+            None
+        }
+    }
 }

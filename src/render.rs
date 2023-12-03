@@ -1,6 +1,7 @@
 use crate::bvh::BvhNode;
 use crate::entity::hit::Intersection;
 use crate::math::pcg::{self, random_direction, random_vector3};
+use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
 use crate::math::extensions::*;
@@ -11,14 +12,14 @@ use rayon::prelude::*;
 pub struct Render {
     pub texture_buffer: Vec<Vector3<f32>>,
     pub bvh_debug: bool,
-    pub texture: Texture<Vector3<f32>>,
+    pub texture: Option<Texture<Vector3<f32>>>,
     accumulated_frames: u32,
     seed: u32
 }
 
 impl Render {
     #[inline]
-    pub fn new(width: u32, height: u32, sky_texture: Texture<Vector3<f32>>) -> Self {
+    pub fn new(width: u32, height: u32, sky_texture: Option<Texture<Vector3<f32>>>) -> Self {
         Render {
             texture_buffer: vec![Vector3::zeros(); (width * height) as usize],
             bvh_debug: false,
@@ -77,9 +78,10 @@ impl Render {
                 let mut light: Vector3<f32> = Vector3::zeros();
 
                 const MAX_BOUNCES: u32 = 3;
-                for _ in 0..MAX_BOUNCES {
+                for bounce_index in 0..MAX_BOUNCES {
                     // Calculate intersection
                     let t_ray = ray.clone();
+                    let ray_direction = *ray.get_direction();
                     let hit_option = scene.cast_ray(&t_ray);
                     // Calculate fragment
                     if let Some(hit) = hit_option {
@@ -87,7 +89,7 @@ impl Render {
 
                         let bar_coords: Vector2<f32> = hit.object.bar_coords(&hit.point);
                         let uv_coors: Vector2<f32> = hit.object.uv_coords(&bar_coords);
-                        let normal: Vector3<f32> = hit.object.normal(&bar_coords, ray.get_direction());
+                        let normal: Vector3<f32> = hit.object.normal(&bar_coords, &ray_direction);
 
                         let albedo_color: Vector3<f32> = if let Some(albedo_tex) = &material.albedo_tex {
                             f32_vector3_from_u32(albedo_tex.sample(uv_coors.x, uv_coors.y)).component_mul(&material.albedo)
@@ -99,14 +101,47 @@ impl Render {
                         let reflection: Vector3<f32> = reflect(ray.get_direction(), &normal);
                         let diffuse: Vector3<f32> = (normal + random_direction(&mut seed)).normalize();
 
+                        // Calculate light contribution by explicit sampling
+                        // FIXME: Produces incorrect result
+                        /*let random_index = pcg::random_u32(&mut seed) as usize % scene.light_objects.len();
+                        let random_light_object = &scene.objects[scene.light_objects[random_index]];
+                        let light_object_midpoint: Vector3<f32> = random_light_object.random_point(&mut seed);
+                        let random_ray = Ray::new(ray.origin, (light_object_midpoint - ray.origin).normalize());
+                        let additional_ray = scene.cast_ray(&random_ray);
+
+                        let additional_emission = if let Some(ar) = additional_ray {
+                            if ar.object.index == hit.object.index || ar.object.index != random_light_object.index {
+                                Vector3::zeros()
+                            } else {
+                                let ar_bar_coord: Vector2<f32> = ar.object.bar_coords(&ar.point);
+                                let ar_normal: Vector3<f32> = ar.object.normal(&ar_bar_coord, random_ray.get_direction());
+                                
+                                ar.object.material.emission * // light emission
+                                random_ray.get_direction().dot(&normal).max(0.0) * // lambert
+                                random_ray.get_direction().dot(&-ar_normal).max(0.0) * // light visibility
+                                (1.0 / (ar.t + 1.0).powi(2)) // Inverse square law
+                            }
+                        } else {
+                            Vector3::zeros()
+                        };*/
+
                         ray.set_direction(&lerp_vector3(&reflection, &diffuse, material.roughness).normalize());
-                        
-                        light += material.emission.component_mul(&color);
+
+                        //explicit sampling
+                        /*if bounce_index == 0 {
+                            light += material.emission.component_mul(&color);
+                        }*/
+                        light += material.emission.component_mul(&color); // comment when using explicit sampling
                         color = color.component_mul(&albedo_color);
+                        //light += additional_emission.component_mul(&color); // explicit sampling
                     } else {
-                        let uvs = Self::uv_on_sphere(ray.get_direction());
-                        let sky_color = self.texture.sample(-uvs.0, uvs.1);
-                        light += sky_color.component_mul(&color);
+                        if let Some(sky_tex) = &self.texture {
+                            let uvs = Self::uv_on_sphere(ray.get_direction());
+                            let sky_color = sky_tex.sample(-uvs.0, uvs.1);
+                            light += sky_color.component_mul(&color);
+                        } else {
+                            light += Vector3::new(0.3, 0.3, 0.3).component_mul(&color);
+                        }
                         break;
                     }
                 }

@@ -13,11 +13,12 @@ pub struct Triangle {
     norm1: Vector3<f32>,
     norm2: Vector3<f32>,
     norm3: Vector3<f32>,
+    normal: Vector3<f32>,
     uv1: Vector2<f32>,
     uv2: Vector2<f32>,
     uv3: Vector2<f32>,
-    normal: Vector3<f32>,
     pub material: Arc<Material>,
+    pub index: usize,
 }
 
 #[allow(dead_code)]
@@ -27,17 +28,17 @@ impl Triangle {
     pub fn new(vertex1: Vector3<f32>, vertex2: Vector3<f32>, vertex3: Vector3<f32>,
         norm1: Vector3<f32>, norm2: Vector3<f32>, norm3: Vector3<f32>,
         uv1: Vector2<f32>, uv2: Vector2<f32>, uv3: Vector2<f32>,
-        material: Arc<Material>) -> Self
+        material: Arc<Material>, index: usize) -> Self
         {
-        let mut x = Triangle {
+        let mut tr = Triangle {
             vertex1, vertex2, vertex3,
             norm1, norm2, norm3,
-            uv1, uv2, uv3,
-            material,
             normal: Vector3::zeros(),
+            uv1, uv2, uv3,
+            material, index
         };
-        x.normal = x.plane_normal();
-        x
+        tr.normal = tr.plane_normal();
+        tr
     }
 
     #[inline(always)]
@@ -97,18 +98,25 @@ impl Triangle {
     
     #[inline]
     pub fn normal(&self, bar_coords: &Vector2<f32>, ray_direction: &Vector3<f32>) -> Vector3<f32> {
-        let direction = self.normal.dot(ray_direction);
-        let is_flipped = if direction > 0.0 {-1.0} else {1.0};
-
-        (bar_coords.x * self.norm1 + bar_coords.y * self.norm2 + (1.0 - bar_coords.x - bar_coords.y) * self.norm3) * is_flipped
+        let intrerp_normal: Vector3<f32> = bar_coords.x * self.norm1 + bar_coords.y * self.norm2 + (1.0 - bar_coords.x - bar_coords.y) * self.norm3;
+        if intrerp_normal.dot(ray_direction) > 0.0 {
+            -intrerp_normal
+        } else {
+            intrerp_normal
+        }
     }
 
     #[inline]
-    pub fn plane_normal(&self) -> Vector3<f32> {
+    fn plane_normal(&self) -> Vector3<f32> {
         // Calculate the normal vector of the triangle (cross product of two edges)
         let v1: Vector3<f32> = self.vertex2 - self.vertex1;
         let v2: Vector3<f32> = self.vertex3 - self.vertex1;
         v1.cross(&v2).normalize()
+    }
+
+    #[inline]
+    pub fn get_plane_normal(&self) -> Vector3<f32> {
+        self.normal
     }
 
     #[inline]
@@ -161,7 +169,6 @@ impl Hittable<Triangle> for Triangle {
         }
         // If everything passed - we hit
         Some(Intersection::new(t, self))
-        
     }
 }
 

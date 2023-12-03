@@ -47,6 +47,7 @@ pub fn load_model(path: &str) -> Vec<Triangle> {
 #[inline]
 fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Vec<Triangle> {
     let mut triangles = vec![];
+    let mut ind = 0;
     model.meshes.iter().for_each(|(mesh_name, mesh)| {
         mesh.polygons.iter().for_each(|pol| {
             for i in pol.start..pol.end {
@@ -59,7 +60,7 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
                             let v1: Vector3<f32> = Vector3::new(v1.0, v1.1, -v1.2);
                             let v2: Vector3<f32> = Vector3::new(v2.0, v2.1, -v2.2);
                             let v3: Vector3<f32> = Vector3::new(v3.0, v3.1, -v3.2);
-
+                            
                             // Calculate the normal vector of the triangle (cross product of two edges)
                             let edge1: Vector3<f32> = v2 - v1;
                             let edge2: Vector3<f32> = v3 - v1;
@@ -71,8 +72,10 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
                                 Vector2::zeros(),
                                 Vector2::zeros(),
                                 Vector2::zeros(),
-                                materials[mesh_name].clone()
+                                materials[mesh_name].clone(),
+                                ind
                             );
+                            ind += 1;
                             triangles.push(triangle);
                         } else {
                             panic!("Mesh must be triangulated, native triangulation is not yet implemented");
@@ -103,8 +106,10 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
                                 Vector2::new(u1.0, u1.1),
                                 Vector2::new(u2.0, u2.1),
                                 Vector2::new(u3.0, u3.1),
-                                materials[mesh_name].clone()
+                                materials[mesh_name].clone(),
+                                ind
                             );
+                            ind += 1;
                             triangles.push(triangle);
                         } else {
                             panic!("Mesh must be triangulated, native triangulation is not yet implemented");
@@ -125,14 +130,16 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
                             // For some reason Z coordinate is negative, so just reverse it
                             let triangle = Triangle::new(
                                 v1, v2, v3,
-                                Vector3::new(n1.0, n1.1, n1.2),
-                                Vector3::new(n2.0, n2.1, n2.2),
-                                Vector3::new(n3.0, n3.1, n3.2),
+                                Vector3::new(n1.0, n1.1, -n1.2),
+                                Vector3::new(n2.0, n2.1, -n2.2),
+                                Vector3::new(n3.0, n3.1, -n3.2),
                                 Vector2::zeros(),
                                 Vector2::zeros(),
                                 Vector2::zeros(),
-                                materials[mesh_name].clone()
+                                materials[mesh_name].clone(),
+                                ind
                             );
+                            ind += 1;
                             triangles.push(triangle);
                         } else {
                             panic!("Mesh must be triangulated, native triangulation is not yet implemented");
@@ -157,14 +164,16 @@ fn load_meshes(model: &RawObj, materials: &HashMap<String, Arc<Material>>) -> Ve
                             // For some reason Z coordinate is negative, so just reverse it
                             let triangle = Triangle::new(
                                 v1, v2, v3,
-                                Vector3::new(n1.0, n1.1, n1.2),
-                                Vector3::new(n2.0, n2.1, n2.2),
-                                Vector3::new(n3.0, n3.1, n3.2),
+                                Vector3::new(n1.0, n1.1, -n1.2),
+                                Vector3::new(n2.0, n2.1, -n2.2),
+                                Vector3::new(n3.0, n3.1, -n3.2),
                                 Vector2::new(u1.0, u1.1),
                                 Vector2::new(u2.0, u2.1),
                                 Vector2::new(u3.0, u3.1),
-                                materials[mesh_name].clone()
+                                materials[mesh_name].clone(),
+                                ind
                             );
+                            ind += 1;
                             triangles.push(triangle);
                         } else {
                             panic!("Mesh must be triangulated, native triangulation is not yet implemented");
@@ -201,10 +210,13 @@ fn load_materials(libs: &[String], path: &str) -> ObjResult<HashMap<String, Arc<
                 raw::material::MtlColor::Xyz(_, _, _) => Vector3::new(0.0, 0.0, 0.0),
                 raw::material::MtlColor::Spectral(_, _) => Vector3::new(0.0, 0.0, 0.0),
             };
-            let albedo_map = raw_material.diffuse_map.as_ref().map(|x| {
-                let map_path = parent_path.join(&x.file);
+            let albedo_map = if let Some(diffuse_map) = raw_material.diffuse_map.as_ref() {
+                let map_path = parent_path.join(&diffuse_map.file);
                 file_to_texture(&map_path, TextureSamplingMode::Repeat)
-            });
+            } else {
+                None
+            };
+
             let material = Arc::new(Material::new(
                 albedo,
                 emission,

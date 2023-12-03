@@ -34,7 +34,8 @@ mod tests {
             Vector2::zeros(),
             Vector2::zeros(),
             Vector2::zeros(),
-            Material::default().into()
+            Material::default().into(),
+            0
             )
         );
         assert_eq!(triangle.aabb_min, Vector3::new(-0.5, 0.0, -0.25));

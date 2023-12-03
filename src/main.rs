@@ -151,8 +151,7 @@ fn main() {
 
     // Load skybox image
     let skybox_texture = file_to_texture(Path::new("sunset_in_the_chalk_quarry_4k.exr"), TextureSamplingMode::Repeat);
-    println!("Sky width: {}", skybox_texture.width());
-    println!("Sky height: {}", skybox_texture.height());
+    
     // Setup camera
     camera.screen_width = imgx as u16;
     camera.screen_height = imgy as u16;
