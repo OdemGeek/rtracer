@@ -1,4 +1,4 @@
-use crate::math::pcg::{self, random_direction, random_vector3, random_f32};
+use crate::math::pcg::{self, random_direction, random_vector3};
 use crate::math::ray::Ray;
 use crate::scene::SceneData;
 use crate::camera::Camera;
@@ -78,7 +78,7 @@ impl Render {
                 let mut light: Vector3<f32> = Vector3::zeros();
 
                 const MAX_BOUNCES: u32 = 3;
-                for bounce_index in 0..MAX_BOUNCES {
+                for _ in 0..MAX_BOUNCES {
                     // Stop when color is black
                     if color.x.max(color.y.max(color.z)) < f32::EPSILON {
                         break;

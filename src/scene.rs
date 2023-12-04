@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::{time::Instant, sync::{Arc, atomic::{AtomicU64, Ordering}}};
 use crate::{math::ray::Ray, entity::{hit::Hit, triangle::Triangle, Bounds}, bvh::{BvhNode, Bvh}};
 use nalgebra::Vector3;
 use rayon::prelude::*;
@@ -7,6 +7,7 @@ pub struct SceneData {
     pub objects: Vec<Triangle>,
     pub light_objects: Vec<usize>,
     bvh_accel: Bvh,
+    pub rays_count: Arc<AtomicU64>,
     pub debug_objects: Vec<BvhNode>,
     bvh_debug: Bvh
 }
@@ -26,6 +27,7 @@ impl SceneData {
             objects,
             light_objects,
             bvh_accel: Bvh::default(),
+            rays_count: Arc::new(AtomicU64::new(0)),
             debug_objects: vec![],
             bvh_debug: Bvh::default(),
         }
@@ -66,6 +68,7 @@ impl SceneData {
 
     #[inline]
     pub fn cast_ray<'a>(&'a self, ray: &'a Ray) -> Option<Hit<Triangle>> {
+        self.rays_count.fetch_add(1, Ordering::Relaxed);
         self.bvh_accel.intersect(ray, &self.objects)
     }
 

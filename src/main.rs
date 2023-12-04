@@ -33,19 +33,21 @@ fn time_since_startup(start_time: Instant) -> f32 {
 #[allow(clippy::too_many_arguments)]
 fn print_times(accumulation_time: Duration, total_frame_elapsed: Duration,
         main_thread_wait_elapsed: Duration, render_thread_wait_elapsed: Duration,
+        rays_count: u64,
         logic_elapsed: Duration, render_elapsed: Duration,
         window_draw_elapsed: Duration, sample_count: u32,
         clear_console: bool) {
     // Remove previous lines
     if clear_console {
         // Let's not talk about it
-        for _ in 0..10 {
+        for _ in 0..11 {
             print!("\x1B[1A\x1B[K");
         }
     }
     // Print new lines
     println!("Render time: {accumulation_time:.2?}\nSample count: {sample_count:?}");
     println!("Current frame timings:\nTotal: {total_frame_elapsed:.2?}");
+    println!("MegaRays/Second: {:.3}", rays_count as f32 * 1e-6);
     println!("Render: {render_elapsed:.2?}\nWait for main thread: {render_thread_wait_elapsed:.2?}");
     println!("Wait for render thread: {main_thread_wait_elapsed:.2?}\nWindow: {window_draw_elapsed:.2?}\nLogic: {logic_elapsed:.2?}\n");
 }
@@ -205,7 +207,7 @@ fn main() {
     let condvar = Arc::new(Condvar::new());
 
     println!();
-    print_times(accumulation_time.elapsed(), total_frame_elapsed, main_thread_wait_elapsed, render_wait_elapsed, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
+    print_times(accumulation_time.elapsed(), total_frame_elapsed, main_thread_wait_elapsed, render_wait_elapsed, 0, logic_elapsed, render_elapsed, window_draw_elapsed, 0, false);
     
     // Clone references to the mutex and condition variable for the thread to use
     let thread_render_data = Arc::clone(&render_data);
@@ -280,7 +282,13 @@ fn main() {
                 counter_time = counter_time.checked_add(Duration::from_secs(1)).unwrap_or(Instant::now());
                 frames_counted = 0;
                 data.render_frames_counted = 0;
-                print_times(data.accumulated_time, total_frame_elapsed, main_thread_wait_elapsed, data.render_wait_elapsed, logic_elapsed, data.render_elapsed, window_draw_elapsed, data.render.get_accumulated_frames_count(), true);
+                print_times(data.accumulated_time, total_frame_elapsed,
+                    main_thread_wait_elapsed, data.render_wait_elapsed,
+                    data.scene_data.rays_count.load(Ordering::Relaxed),
+                    logic_elapsed, data.render_elapsed, window_draw_elapsed,
+                    data.render.get_accumulated_frames_count(), true);
+
+                data.scene_data.rays_count.store(0, Ordering::Relaxed);
                 total_frame_elapsed = Duration::ZERO;
                 data.render_wait_elapsed = Duration::ZERO;
                 main_thread_wait_elapsed = Duration::ZERO;
