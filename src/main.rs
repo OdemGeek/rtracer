@@ -10,6 +10,7 @@ use minifb::{Key, Window, WindowOptions};
 use rtracer::scene::SceneData;
 use rtracer::render::Render;
 use rtracer::loaders::scene_loader::load_scene;
+use rtracer::gamma_lut::GammaLut;
 
 //use textures::texture::TextureSamplingMode;
 //use textures::extensions::*;
@@ -144,6 +145,9 @@ fn main() {
         };
     }
 
+    // Create gamma lut
+    let gamma_lut = GammaLut::new(32, 2.2);
+
     // Create scene
     let (loaded_geometry, mut camera) = load_scene("scene.rts");
     let mut scene_data = SceneData::new(loaded_geometry);
@@ -170,7 +174,7 @@ fn main() {
         panic!("{}", e);
     });
     // Limit window fps to 120
-    window.limit_update_rate(Some(Duration::from_secs_f32(1.0 / 120.0)));
+    //window.limit_update_rate(Some(Duration::from_secs_f32(1.0 / 120.0)));
 
     let render = Render::new(imgx, imgy, skybox_texture);
     let accumulation_time = Instant::now();
@@ -379,9 +383,9 @@ fn main() {
         if image_updated {
             image_u32_buffer = output_buffer.iter().map(|p| {
                 u32_from_u8_rgb(
-                    (p.x.powf(1.0/2.2) * 255.0) as u8,
-                    (p.y.powf(1.0/2.2) * 255.0) as u8,
-                    (p.z.powf(1.0/2.2) * 255.0) as u8
+                    (gamma_lut.get(p.x) * 255.0) as u8,
+                    (gamma_lut.get(p.y) * 255.0) as u8,
+                    (gamma_lut.get(p.z) * 255.0) as u8
                 )
             }).collect();
         }

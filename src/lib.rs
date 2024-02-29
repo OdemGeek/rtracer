@@ -7,3 +7,4 @@ pub mod render;
 pub mod material;
 pub mod camera;
 pub mod bvh;
+pub mod gamma_lut;
